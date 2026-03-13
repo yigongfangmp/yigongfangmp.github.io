@@ -2870,8 +2870,18 @@ const depositAmount = totalCents > 100000 ? 100 : (totalCents > 0 ? 50 : 0);
         function closeMapModal() { 
             const overlay = document.getElementById('map-modal-overlay');
             if (overlay.classList.contains('active')) {
+                // 【核心修复1】：瞬间隐藏弹窗主体，强行打断地图引擎对 iOS 触摸事件的底层劫持
+                const modalContent = overlay.querySelector('.modal');
+                if (modalContent) modalContent.style.display = 'none';
+                
                 overlay.classList.remove('active'); 
                 toggleBodyScroll(); 
+                
+                // 【核心修复2】：给浏览器一点时间解除锁定，再恢复状态并强制对齐滚动条
+                setTimeout(() => {
+                    if (modalContent) modalContent.style.display = '';
+                    window.scrollTo(0, scrollPosition);
+                }, 50);
             }
         }
 
