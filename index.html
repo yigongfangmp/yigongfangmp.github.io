@@ -751,7 +751,7 @@
             }, 2000);
         }
 
-        let scrollPosition = 0;
+                let scrollPosition = 0;
         let scrollLockTimeout = null;
         
         function toggleBodyScroll() {
@@ -768,11 +768,14 @@
                     if (document.body.classList.contains('no-scroll')) { 
                         document.body.classList.remove('no-scroll'); 
                         document.body.style.top = ''; 
-                        window.scrollTo(0, scrollPosition); 
+                        setTimeout(() => {
+                            window.scrollTo(0, scrollPosition); 
+                        }, 10);
                     } 
                 }
             }, 15);
         }
+
 
         let imgScale = 1; let imgTranslateX = 0; let imgTranslateY = 0; let zoomInitDistance = 0; let zoomInitScale = 1; let zoomStartX = 0; let zoomStartY = 0; let isDraggingImg = false; let lastTapTime = 0;
         function applyImgTransform(withTransition = false) { 
@@ -1676,9 +1679,9 @@
             }
         }
 
-        async function changeOrderStatus(orderId, currentStatus, contactRaw) {
+                async function changeOrderStatus(orderId, currentStatus, contactRaw) {
             window.tempStatusResolveValue = null;
-            const optionsHtml = Object.keys(ORDER_STATUS_MAP).map(key => `<div style="padding: 12px; border-bottom: 1px solid var(--divider); color: ${key===currentStatus ? 'var(--accent-color)' : 'var(--text-primary)'}; font-weight: ${key===currentStatus ? 'bold' : 'normal'}; cursor: pointer;" onclick="window.tempStatusResolveValue='${key}'; closeCustomModal();">${ORDER_STATUS_MAP[key]}</div>`).join('');
+            const optionsHtml = Object.keys(ORDER_STATUS_MAP).map(key => `<div style="padding: 12px; border-bottom: 1px solid var(--divider); color: ${key===currentStatus ? 'var(--accent-color)' : 'var(--text-primary)'}; font-weight: ${key===currentStatus ? 'bold' : 'normal'}; cursor: pointer;" onclick="event.stopPropagation(); window.tempStatusResolveValue='${key}'; closeCustomModal();">${ORDER_STATUS_MAP[key]}</div>`).join('');
             
             await showModal({ 
                 title: '修改追踪状态', 
@@ -1705,6 +1708,7 @@
                 } catch(e) { showToast('更新失败', 'error'); }
             }
         }
+
 
         async function archiveOrder(orderId) {
             if (!isAdmin) return; 
