@@ -782,7 +782,7 @@
         }
         
         function initImageViewerTouch() {
-            const viewerImg = document.getElementById('viewer-img'); 
+            const viewerImg = document.getElementById('viewer-img');
             if (!viewerImg) return;
             
             viewerImg.addEventListener('touchstart', (e) => { 
@@ -793,27 +793,28 @@
                 } else if (e.touches.length === 1) { 
                     const now = Date.now(); 
                     if (now - lastTapTime < 300) { 
+                        e.preventDefault(); // 修复：拦截双击默认行为
                         imgScale = imgScale > 1 ? 1 : 2; 
                         imgTranslateX = 0; 
                         imgTranslateY = 0; 
                         applyImgTransform(true); 
+                        lastTapTime = 0; // 修复：重置点击时间，防止三连击导致逻辑抽风
                     } else { 
                         isDraggingImg = true; 
                         zoomStartX = e.touches[0].clientX - imgTranslateX; 
                         zoomStartY = e.touches[0].clientY - imgTranslateY; 
+                        lastTapTime = now;
                     } 
-                    lastTapTime = now; 
                 } 
             }, { passive: false });
             
             viewerImg.addEventListener('touchmove', (e) => { 
+                e.preventDefault(); // 修复：全局拦截默认滑动，彻底杜绝背景穿透和橡皮筋回弹
                 if (e.touches.length === 2) { 
-                    e.preventDefault(); 
                     const currentDistance = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); 
                     imgScale = Math.min(Math.max(1, zoomInitScale * (currentDistance / zoomInitDistance)), 4); 
                     applyImgTransform(false); 
                 } else if (e.touches.length === 1 && isDraggingImg && imgScale > 1) { 
-                    e.preventDefault(); 
                     imgTranslateX = e.touches[0].clientX - zoomStartX; 
                     imgTranslateY = e.touches[0].clientY - zoomStartY; 
                     applyImgTransform(false); 
@@ -821,7 +822,15 @@
             }, { passive: false });
             
             viewerImg.addEventListener('touchend', (e) => { 
-                isDraggingImg = false; 
+                if (e.touches.length === 0) {
+                    isDraggingImg = false; 
+                } else if (e.touches.length === 1) {
+                    // 修复：双指缩放时松开一根手指，无缝平滑过渡到单指拖拽，防止画面跳闪或卡死
+                    isDraggingImg = true;
+                    zoomStartX = e.touches[0].clientX - imgTranslateX; 
+                    zoomStartY = e.touches[0].clientY - imgTranslateY; 
+                }
+
                 if (imgScale < 1) { 
                     imgScale = 1; 
                     imgTranslateX = 0; 
