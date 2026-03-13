@@ -489,7 +489,7 @@
         </div>
     </div>
 
-    <div class="cart-panel-overlay" id="admin-overlay" onclick="closeAdmin()"></div>
+<div class="cart-panel-overlay" id="admin-overlay" onclick="closeAdmin()"></div>
     <div class="cart-panel" id="admin-panel">
         <div class="cart-header">
             <span id="admin-sheet-title">上架新商品</span>
@@ -514,8 +514,9 @@
                 <div class="form-group"><label id="label-name">装备名称</label><input type="text" class="form-control" id="new-name" placeholder="如: Ohlins 倒置前叉" required autocomplete="off"></div>
                 
                 <div class="form-group" style="display: flex; gap: 10px;">
-                    <div style="flex: 1;"><label>营销角标</label><select class="form-control" id="new-badge"><option value="">无角标</option><option value="hot">爆款推荐</option><option value="discount">特价限时</option><option value="new">新品上架</option><option value="clearance">清仓处理</option></select></div>
+                    <div style="flex: 1;"><label>营销角标</label><select class="form-control" id="new-badge"><option value="">无角标</option><option value="hot">爆款推荐</option><option value="discount">特价限时</option><option value="new">新品上架</option><option value="clearance">清仓</option></select></div>
                     <div style="flex: 1;"><label>出售价格</label><input type="number" step="0.01" min="0" class="form-control" id="new-price" placeholder="如: 18500" required></div>
+                    <div style="flex: 1;"><label>实际库存</label><input type="number" min="0" step="1" class="form-control" id="new-stock" placeholder="件数" value="99" required></div>
                 </div>
 
                 <div class="form-group" id="config-group" style="display: none;"><label>整车配件清单 <span style="font-size:12px; font-weight:normal; color:var(--text-secondary);">(仅二手车展示)</span></label><textarea class="form-control" id="new-config" rows="3" placeholder="如: 72v100a电池，Brembo卡钳，Ohlins前减震..."></textarea></div>
@@ -687,13 +688,21 @@
 
         /* ================= 数据无痕编解码逻辑 ================= */
         function decodeProductName(rawName) {
-            if (!rawName) return { name: '', config: '', badge: '', isPinned: false };
+            if (!rawName) return { name: '', config: '', badge: '', isPinned: false, stock: 999 };
             const parts = String(rawName).split('_||_');
-            return { name: parts[0] || '', config: parts[1] || '', badge: parts[2] || '', isPinned: parts[3] === 'true' };
+            let stock = 999;
+            if (parts[4] !== undefined && parts[4] !== '') stock = parseInt(parts[4]);
+            return { 
+                name: parts[0] || '', 
+                config: parts[1] || '', 
+                badge: parts[2] || '', 
+                isPinned: parts[3] === 'true', 
+                stock: isNaN(stock) ? 999 : stock 
+            };
         }
         
-        function encodeProductName(name, config, badge, isPinned) { 
-            return `${name}_||_${config || ''}_||_${badge || ''}_||_${isPinned || false}`; 
+        function encodeProductName(name, config, badge, isPinned, stock) { 
+            return `${name}_||_${config || ''}_||_${badge || ''}_||_${isPinned || false}_||_${stock !== undefined ? stock : 999}`; 
         }
 
         const ORDER_STATUS_MAP = { 'new': '待处理', 'contacted': '已沟通', 'deposited': '已付定', 'completed': '已成交', 'canceled': '已跑单' };
@@ -1041,7 +1050,11 @@
             const product = products.find(p => String(p.id) === String(id)); 
             if(product && product.in_stock === false) return showToast('该商品暂时缺货', 'warning'); 
             
+            const parsed = decodeProductName(product.name);
             const item = cart.find(i => String(i.id) === String(id)); 
+            const currentQty = item ? item.qty : 0;
+            if (currentQty + 1 > parsed.stock) return showToast(`手慢了，该项库存只剩 ${parsed.stock} 件啦`, 'warning');
+            
             if (item) item.qty++; 
             else cart.push({ ...product, qty: 1 }); 
             
@@ -1053,6 +1066,13 @@
             triggerHaptic(); 
             const index = cart.findIndex(i => String(i.id) === String(id)); 
             if (index > -1) { 
+                if (delta > 0) {
+                    const product = products.find(p => String(p.id) === String(id));
+                    const parsed = decodeProductName(product?.name);
+                    if (cart[index].qty + delta > parsed.stock) {
+                        return showToast(`手慢了，该项库存只剩 ${parsed.stock} 件啦`, 'warning');
+                    }
+                }
                 cart[index].qty += delta; 
                 if (cart[index].qty <= 0) cart.splice(index, 1); 
                 updateCart(); 
@@ -1298,6 +1318,38 @@
                         new Image().src = fallbackUrl;
                     });
                 } catch(e) { console.warn('Push Error', e); }
+
+                // --- 自动扣库存与售罄下架逻辑 ---
+                try {
+                    let stockChanged = false;
+                    for (const item of itemsArray) {
+                        const pRes = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${item.id}&select=name,in_stock`, {
+                            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                        });
+                        if (pRes.ok) {
+                            const pData = await pRes.json();
+                            if (pData && pData.length > 0) {
+                                const currentParsed = decodeProductName(pData[0].name);
+                                let newStock = currentParsed.stock - item.qty;
+                                if (newStock < 0) newStock = 0;
+                                const newInStock = pData[0].in_stock && newStock > 0; // 只要库存变0，直接变成售罄
+                                
+                                const newEncodedName = encodeProductName(currentParsed.name, currentParsed.config, currentParsed.badge, currentParsed.isPinned, newStock);
+                                
+                                await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${item.id}`, {
+                                    method: 'PATCH',
+                                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+                                    body: JSON.stringify({ name: newEncodedName, in_stock: newInStock })
+                                });
+                                stockChanged = true;
+                            }
+                        }
+                    }
+                    if (stockChanged) {
+                        try { localStorage.removeItem('ygf_products_cache'); } catch(e) {}
+                        fetchProducts(); // 后台静默刷新列表让库存变动生效
+                    }
+                } catch(e) { console.warn('库存扣除异常', e); }
 
                 if (isFromCart) {
                     cart = []; 
@@ -1961,6 +2013,8 @@
                     urgencyHtml = `<div style="font-size: 11px; color: var(--accent-color); margin-top: 6px; display: flex; align-items: center; gap: 4px;"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>近期多人咨询，建议先锁单</div>`;
                 }
 
+                const bossStockHtml = isAdmin ? `<div style="font-size: 11px; color: ${parsed.stock > 0 ? '#007AFF' : '#FF3B30'}; background: ${parsed.stock > 0 ? 'rgba(0,122,255,0.1)' : 'rgba(255,59,48,0.1)'}; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px; font-weight: 600;">老板可见 · 库存: ${parsed.stock}</div>` : '';
+
                 return `
                 <div class="card ${isOutOfStock ? 'out-of-stock' : ''}" data-category="${escapeHTML(p.category || '')}" data-name="${escapeHTML(parsed.name.toLowerCase())}" style="${isOutOfStock ? 'opacity: 0.6;' : ''} display: none;">
                     ${badgeHtml}
@@ -1969,7 +2023,7 @@
                     ${imageHtml}
                 </div>
                     <div class="card-body">
-                        <div class="card-title" title="${escapeHTML(parsed.name)}">${escapeHTML(parsed.name)}${displayConfig}${urgencyHtml}</div>
+                        <div class="card-title" title="${escapeHTML(parsed.name)}">${escapeHTML(parsed.name)}${displayConfig}${bossStockHtml}${urgencyHtml}</div>
                         <div class="card-bottom">
                             <div class="price-wrap"><span class="price-symbol">¥</span><span class="price">${safePrice(p.price).replace(/\.00$/, '')}</span></div>
                             <div class="action-group">
@@ -2305,6 +2359,10 @@
             
             customInput.style.display = 'none'; 
             customInput.required = false; 
+
+            if (!document.getElementById('edit-product-id').value) {
+                document.getElementById('new-stock').value = type === 'used_car' ? 1 : 99;
+            }
             
             if (type === 'part') { 
                 nameLabel.innerText = "装备名称"; 
@@ -2341,7 +2399,7 @@
             
             const idStr = document.getElementById('edit-product-id').value; 
             const price = parseFloat(document.getElementById('new-price').value); 
-            const inStock = document.getElementById('new-instock').checked; 
+            let inStock = document.getElementById('new-instock').checked; 
             const isPinned = document.getElementById('new-ispinned').checked; 
             const badge = document.getElementById('new-badge').value; 
             const isUsedCar = document.getElementById('new-item-type').value === 'used_car'; 
@@ -2361,6 +2419,10 @@
             let nameRaw = document.getElementById('new-name').value.trim(); 
             let configRaw = isUsedCar ? document.getElementById('new-config').value.trim() : ''; 
             
+            let stockVal = parseInt(document.getElementById('new-stock').value);
+            if(isNaN(stockVal) || stockVal < 0) stockVal = 0;
+            if(stockVal === 0) inStock = false; 
+            
             if(isNaN(price) || price < 0) { 
                 showToast('请输入合法的金额', 'warning'); 
                 btn.disabled = false; 
@@ -2375,7 +2437,7 @@
                 return; 
             }
             
-            let encodedName = encodeProductName(nameRaw, configRaw, badge, isPinned);
+            let encodedName = encodeProductName(nameRaw, configRaw, badge, isPinned, stockVal);
 
             try { 
                 let finalImageUrls = [...currentUploadedUrls]; 
@@ -2518,6 +2580,7 @@
             document.getElementById('new-price').value = product.price; 
             document.getElementById('new-image').value = ''; 
             document.getElementById('new-badge').value = parsed.badge || ''; 
+            document.getElementById('new-stock').value = parsed.stock;
             
             const isInStock = product.in_stock !== false; 
             document.getElementById('new-instock').checked = isInStock; 
