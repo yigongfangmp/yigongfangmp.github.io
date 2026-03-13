@@ -1704,7 +1704,20 @@
                     });
                     if (!response.ok) throw new Error();
                     showToast('状态已更新', 'success');
-                    openOrdersPanel(true);
+                    
+                    // 【关键修复点 1】：加上 await，确保列表重新渲染彻底完成
+                    await openOrdersPanel(true);
+                    
+                    // 【关键修复点 2】：打断施法，强制 iOS 重新构建这个区域的滚动上下文
+                    setTimeout(() => {
+                        const scroller = document.querySelector('#orders-panel .cart-content');
+                        if (scroller) {
+                            scroller.style.overflowY = 'hidden'; // 先隐藏滚动
+                            scroller.offsetHeight; // 强制浏览器重排 (Reflow)
+                            scroller.style.overflowY = 'auto'; // 再恢复滚动，激活引擎
+                        }
+                    }, 50);
+
                 } catch(e) { showToast('更新失败', 'error'); }
             }
         }
