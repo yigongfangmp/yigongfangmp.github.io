@@ -528,8 +528,12 @@
             <button type="submit" form="add-product-form" class="checkout-btn" id="submit-btn">确认上架</button>
             <button type="button" class="delete-btn" id="delete-btn" onclick="deleteProduct()">永久下架此商品</button>
             <div style="height: 1px; background: var(--divider); margin: 16px 0;"></div>
-            <button type="button" class="checkout-btn" style="background: linear-gradient(90deg, #07c160, #06ad56);" onclick="document.getElementById('qr-upload-input').click()">更新老板微信二维码</button>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" class="checkout-btn" style="flex: 1; background: linear-gradient(90deg, #07c160, #06ad56); font-size: 14px; padding: 12px 0;" onclick="document.getElementById('qr-upload-input').click()">更新微信二维码</button>
+                <button type="button" class="checkout-btn" style="flex: 1; background: linear-gradient(90deg, #FF9500, #FFaa00); font-size: 14px; padding: 12px 0;" onclick="document.getElementById('pay-qr-upload-input').click()">更新收款码</button>
+            </div>
             <input type="file" id="qr-upload-input" accept="image/*" style="display:none" onchange="handleQRUpload(event)">
+            <input type="file" id="pay-qr-upload-input" accept="image/*" style="display:none" onchange="handlePayQRUpload(event)">
         </div>
     </div>
 
@@ -751,7 +755,7 @@
             }, 2000);
         }
 
-                let scrollPosition = 0;
+        let scrollPosition = 0;
         let scrollLockTimeout = null;
         
         function toggleBodyScroll() {
@@ -776,7 +780,6 @@
             }, 15);
         }
 
-
         let imgScale = 1; let imgTranslateX = 0; let imgTranslateY = 0; let zoomInitDistance = 0; let zoomInitScale = 1; let zoomStartX = 0; let zoomStartY = 0; let isDraggingImg = false; let lastTapTime = 0;
         function applyImgTransform(withTransition = false) { 
             const viewerImg = document.getElementById('viewer-img'); 
@@ -796,12 +799,12 @@
                 } else if (e.touches.length === 1) { 
                     const now = Date.now(); 
                     if (now - lastTapTime < 300) { 
-                        e.preventDefault(); // 修复：拦截双击默认行为
+                        e.preventDefault();
                         imgScale = imgScale > 1 ? 1 : 2; 
                         imgTranslateX = 0; 
                         imgTranslateY = 0; 
                         applyImgTransform(true); 
-                        lastTapTime = 0; // 修复：重置点击时间，防止三连击导致逻辑抽风
+                        lastTapTime = 0;
                     } else { 
                         isDraggingImg = true; 
                         zoomStartX = e.touches[0].clientX - imgTranslateX; 
@@ -812,7 +815,7 @@
             }, { passive: false });
             
             viewerImg.addEventListener('touchmove', (e) => { 
-                e.preventDefault(); // 修复：全局拦截默认滑动，彻底杜绝背景穿透和橡皮筋回弹
+                e.preventDefault();
                 if (e.touches.length === 2) { 
                     const currentDistance = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); 
                     imgScale = Math.min(Math.max(1, zoomInitScale * (currentDistance / zoomInitDistance)), 4); 
@@ -828,7 +831,6 @@
                 if (e.touches.length === 0) {
                     isDraggingImg = false; 
                 } else if (e.touches.length === 1) {
-                    // 修复：双指缩放时松开一根手指，无缝平滑过渡到单指拖拽，防止画面跳闪或卡死
                     isDraggingImg = true;
                     zoomStartX = e.touches[0].clientX - imgTranslateX; 
                     zoomStartY = e.touches[0].clientY - imgTranslateY; 
@@ -993,7 +995,7 @@
         const SUPABASE_URL = 'https://jcwakdehorzivjbcxcmy.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impjd2FrZGVob3J6aXZqYmN4Y215Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5MTQ5OTAsImV4cCI6MjA4ODQ5MDk5MH0._WV_1_fKBp6I7vjJ18F3Ps_kwCCl5Pn9bQqlt_ghdWc';
 
-        let products = []; let shopImages = []; let qrCodeUrl = ''; let qrCodeId = null; let announcementData = null; let cart = [];
+        let products = []; let shopImages = []; let qrCodeUrl = ''; let qrCodeId = null; let payQrCodeUrl = ''; let payQrCodeId = null; let announcementData = null; let cart = [];
         let currentUploadedUrls = []; let currentNewFiles = []; let urlsToDelete = []; let currentCarImages = []; let currentCarImageIndex = 0;
         
         let currentZone = 'parts'; let currentCategory = 'all'; let currentUsedCategory = 'used_all'; let isAdmin = false;
@@ -1143,7 +1145,7 @@
                 const a = document.createElement('a'); 
                 a.style.display = 'none'; 
                 a.href = blobUrl; 
-                a.download = '老板微信二维码.jpg'; 
+                a.download = '老板二维码.jpg'; 
                 document.body.appendChild(a); 
                 a.click(); 
                 document.body.removeChild(a); 
@@ -1304,6 +1306,7 @@
                 }
                 
                 const qrImgSrc = qrCodeUrl ? escapeHTML(qrCodeUrl) : 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=weixin://contacts/profile/wxid_w5lxkhqtn06w22';
+                const payQrImgSrc = payQrCodeUrl ? escapeHTML(payQrCodeUrl) : 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PayCodeEmpty';
                 const depositAmount = totalCents > 100000 ? 100 : (totalCents > 0 ? 50 : 0);
 
                 const finalAction = await showModal({
@@ -1320,15 +1323,43 @@
                                 您也可以<b style="color:var(--accent-color);">主动添加老板微信</b>极速沟通！
                             </div>
                             <div style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; background: var(--card-color); padding: 6px 12px; border-radius: 999px; color: var(--text-secondary); font-size: 12px; font-weight: 500; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 0.5px solid var(--divider);">
-                                向下滑动查看老板微信及凭证 <span class="scroll-hint-icon"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" style="margin-top: 2px;"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
+                                向下滑动查看详情与码 <span class="scroll-hint-icon"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" style="margin-top: 2px;"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
                             </div>
                         </div>
 
                         <div style="background: var(--img-bg); padding: 16px 12px; border-radius: 12px; text-align: center; margin-bottom: 16px;">
-                            <div style="font-weight: 600; font-size: 14px; margin-bottom: 12px; color: var(--text-primary);">长按识别二维码添加老板，发送刚才复制的凭证</div>
-                            <div style="margin: 0 auto 10px; width: 140px; height: 140px; background: #FFF; padding: 6px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);"><img src="${qrImgSrc}" alt="老板微信" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px; -webkit-touch-callout: default;"></div>
-                            <button onclick="saveQRCode('${qrImgSrc}')" style="background: transparent; color: var(--text-primary); border: 1px solid var(--divider); padding: 6px 16px; border-radius: 99px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 4px; width: 100%;"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>保存二维码到手机相册</button>
-                            <button onclick="manualCopyOrder()" style="background: transparent; color: var(--text-primary); border: 1px solid var(--divider); padding: 8px 16px; border-radius: 99px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 8px;"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>复制订单凭证与明细</button>
+                            <div style="font-weight: 600; font-size: 14px; margin-bottom: 12px; color: var(--text-primary);">长按二维码添加微信或支付意向金</div>
+                            
+                            <div style="display: flex; justify-content: center; gap: 16px; margin-bottom: 12px;">
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;">
+                                    <div style="width: 110px; height: 110px; background: #FFF; padding: 4px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                                        <img src="\${qrImgSrc}" alt="老板微信" style="width: 100%; height: 100%; object-fit: contain; border-radius: 6px; -webkit-touch-callout: default;">
+                                    </div>
+                                    <span style="font-size: 13px; color: var(--text-primary); font-weight: 600;">1. 发送单号</span>
+                                </div>
+                                
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;">
+                                    <div style="width: 110px; height: 110px; background: #FFF; padding: 4px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                                        <img src="\${payQrImgSrc}" alt="门店收款码" style="width: 100%; height: 100%; object-fit: contain; border-radius: 6px; -webkit-touch-callout: default;">
+                                    </div>
+                                    <span style="font-size: 13px; color: var(--text-primary); font-weight: 600;">2. 支付锁单</span>
+                                </div>
+                            </div>
+                            
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5; background: rgba(52, 199, 89, 0.08); padding: 10px 12px; border-radius: 8px; border: 1px dashed rgba(52, 199, 89, 0.3); text-align: left;">
+                                <div style="color: #34C759; font-weight: 700; margin-bottom: 4px;">💡 预付留货提示（完全自愿）：</div>
+                                实体店好货走量快，建议您支付 <b>¥\${depositAmount} 意向金</b>，老板确认后会优先为您锁单。<br>
+                                <span style="font-size: 11px; opacity: 0.85;">(到店不满意随时 <b style="color: #34C759;">100%原路秒退</b>，绝不强买强卖哦🤝)</span>
+                            </div>
+
+                            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                                <button onclick="saveQRCode('\${qrImgSrc}')" style="flex: 1; background: transparent; color: var(--text-primary); border: 1px solid var(--divider); padding: 8px 0; border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer;">保存微信码</button>
+                                <button onclick="saveQRCode('\${payQrImgSrc}')" style="flex: 1; background: transparent; color: var(--text-primary); border: 1px solid var(--divider); padding: 8px 0; border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer;">保存收款码</button>
+                            </div>
+                            
+                            <button onclick="manualCopyOrder()" style="background: var(--card-color); color: var(--text-primary); border: 1px solid var(--divider); padding: 10px 16px; border-radius: 99px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>复制订单凭证与明细
+                            </button>
                             
                             <a href="weixin://" style="background: #07c160; color: #FFF; text-decoration: none; padding: 10px 16px; border-radius: 99px; font-size: 14px; font-weight: 600; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 12px; box-shadow: 0 4px 12px rgba(7, 193, 96, 0.3); width: 100%;">
                                 <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>已复制凭证，点此一键打开微信
@@ -1339,20 +1370,15 @@
                             <div style="position: absolute; top: -15px; right: -15px; width: 60px; height: 60px; background: var(--accent-bg); border-radius: 50%; display: flex; align-items: flex-end; justify-content: flex-start; padding: 10px; color: var(--accent-color); font-weight: 800; font-size: 12px; opacity: 0.5;">凭证</div>
                             <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">凭此单号与老板核对与调取记录</div>
                             <div style="font-size: 18px; font-weight: 800; color: var(--text-primary); margin-bottom: 12px; font-family: monospace; letter-spacing: 1px; display: flex; align-items: center; justify-content: space-between;">
-                                <span>${orderNo}</span>
+                                <span>\${orderNo}</span>
                                 <button onclick="manualCopyOrder()" style="background: var(--accent-bg); color: var(--accent-color); border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: filter 0.2s;">复制凭证</button>
                             </div>
-                            <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: var(--text-secondary);">总金额</span><span style="font-weight: 700; color: var(--price-color);">¥${totalStr}</span></div>
+                            <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: var(--text-secondary);">总金额</span><span style="font-weight: 700; color: var(--price-color);">¥\${totalStr}</span></div>
                         </div>
                         
                         <div style="background: rgba(0, 122, 255, 0.1); border: 1px solid rgba(0, 122, 255, 0.3); padding: 12px 16px; border-radius: 12px; margin-bottom: 16px;">
                             <div style="color: #007AFF; font-size: 14px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 4px;"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="3" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> 订单已永久保存</div>
                             <div style="color: var(--text-primary); font-size: 13px;">您可以随时点击页面顶部的「<svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none" style="vertical-align: middle; margin: 0 2px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg><b>历史订单</b>」按钮，输入您的联系方式即可找回本清单和查看进度！</div>
-                        </div>
-
-                        <div style="background: rgba(52, 199, 89, 0.1); border: 1px solid rgba(52, 199, 89, 0.3); padding: 12px 16px; border-radius: 12px; margin-bottom: 16px;">
-                            <div style="color: #34C759; font-size: 14px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 4px;"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="3" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>实体门店保障 · 极速退款</div>
-                            <div style="color: var(--text-primary); font-size: 13px;">线下走量快，为防白跑一趟，建议加老板微信支付 <b>¥${depositAmount}</b> 意向金为您预留锁单。<br><span style="color: var(--text-secondary); font-size: 12px;">(到店不满意 / 缺货，意向金 100% 全额秒退)</span></div>
                         </div>
                     </div>`,
                     confirmText: '完成并关闭', 
@@ -1679,16 +1705,14 @@
             }
         }
 
-                async function changeOrderStatus(orderId, currentStatus, contactRaw) {
+        async function changeOrderStatus(orderId, currentStatus, contactRaw) {
             window.tempStatusResolveValue = null;
             
-            // 【核心修复 1】：点击时立刻将 overflow 设为 hidden，瞬间强杀 iOS 的滚动惯性
             const optionsHtml = Object.keys(ORDER_STATUS_MAP).map(key => 
                 `<div style="padding: 12px; border-bottom: 1px solid var(--divider); color: ${key===currentStatus ? 'var(--accent-color)' : 'var(--text-primary)'}; font-weight: ${key===currentStatus ? 'bold' : 'normal'}; cursor: pointer;" 
                 onclick="event.stopPropagation(); const box = document.getElementById('temp-scroll-box'); if(box) box.style.overflow='hidden'; window.tempStatusResolveValue='${key}'; closeCustomModal();">${ORDER_STATUS_MAP[key]}</div>`
             ).join('');
             
-            // 【核心修复 2】：移除容易引发 Bug 的 -webkit-overflow-scrolling，改用标准 overscroll-behavior
             await showModal({ 
                 title: '修改追踪状态', 
                 desc: `<div id="temp-scroll-box" style="text-align:center; max-height: 200px; overflow-y:auto; overscroll-behavior: contain;">${optionsHtml}</div>`, 
@@ -1713,14 +1737,13 @@
                     
                     await openOrdersPanel(true);
                     
-                    // 【核心修复 3】：代码级模拟“锁屏再亮屏”，用 display 切换强迫浏览器重置滚动树
                     setTimeout(() => {
                         const panelScroll = document.querySelector('#orders-panel .cart-content');
                         if (panelScroll) {
                             const currentScroll = panelScroll.scrollTop;
-                            panelScroll.style.display = 'none'; // 瞬间隐藏
-                            panelScroll.offsetHeight;           // 强制触发重绘 (Reflow)
-                            panelScroll.style.display = 'block';// 瞬间恢复
+                            panelScroll.style.display = 'none';
+                            panelScroll.offsetHeight;          
+                            panelScroll.style.display = 'block';
                             panelScroll.scrollTop = currentScroll;
                         }
                     }, 20);
@@ -1728,7 +1751,6 @@
                 } catch(e) { showToast('更新失败', 'error'); }
             }
         }
-
 
         async function archiveOrder(orderId) {
             if (!isAdmin) return; 
@@ -1837,7 +1859,6 @@
             showToast('导出成功', 'success');
         }
 
-        /* ================= 核心渲染与状态交互 ================= */
         function getUsedCarCategories() { 
             const defaults = [{id: 'used_niu', name: '小牛'}, {id: 'used_ninebot', name: '九号'}]; 
             const defaultIds = ['used_niu', 'used_ninebot']; 
@@ -1900,7 +1921,7 @@
         function renderProducts() {
             const grid = document.getElementById('products-grid'); 
             const allValidProducts = products.filter(p => { 
-                return p.category !== '__shop_gallery__' && p.category !== '__qr_code__' && p.category !== '__announcement__'; 
+                return p.category !== '__shop_gallery__' && p.category !== '__qr_code__' && p.category !== '__announcement__' && p.category !== '__pay_qr_code__'; 
             });
             
             const sortedProducts = [...allValidProducts].sort((a, b) => { 
@@ -2157,17 +2178,16 @@
         
         function parseFetchedData(allData) { 
             const qrData = allData.find(p => p.category === '__qr_code__'); 
-            if (qrData) { 
-                qrCodeUrl = qrData.image_url; 
-                qrCodeId = qrData.id; 
-            } else { 
-                qrCodeUrl = ''; 
-                qrCodeId = null; 
-            } 
+            if (qrData) { qrCodeUrl = qrData.image_url; qrCodeId = qrData.id; } 
+            else { qrCodeUrl = ''; qrCodeId = null; } 
+
+            const payQrData = allData.find(p => p.category === '__pay_qr_code__'); 
+            if (payQrData) { payQrCodeUrl = payQrData.image_url; payQrCodeId = payQrData.id; } 
+            else { payQrCodeUrl = ''; payQrCodeId = null; } 
             
             announcementData = allData.find(p => p.category === '__announcement__');
             shopImages = allData.filter(p => p.category === '__shop_gallery__'); 
-            products = allData.filter(p => p.category !== '__shop_gallery__' && p.category !== '__qr_code__' && p.category !== '__announcement__'); 
+            products = allData.filter(p => p.category !== '__shop_gallery__' && p.category !== '__qr_code__' && p.category !== '__announcement__' && p.category !== '__pay_qr_code__'); 
         }
 
         async function fetchProducts() {
@@ -2627,6 +2647,51 @@
                 if (!response.ok) throw new Error('保存失败'); 
                 
                 showToast('二维码更新成功！', 'success'); 
+                try { localStorage.removeItem('ygf_products_cache'); } catch(e) { console.warn(e); } 
+                await fetchProducts(); 
+            } catch (error) { 
+                showToast('上传失败', 'error'); 
+            } finally { 
+                event.target.value = ''; 
+            } 
+        }
+
+        async function handlePayQRUpload(event) { 
+            if (!isAdmin) return; 
+            const file = event.target.files[0]; 
+            if (!file) return; 
+            showToast('正在压缩并更新收款码...', 'info'); 
+            try { 
+                const compressedFile = await compressImage(file, 800, 800, 0.9);
+                const fileExt = 'jpg'; 
+                const fileName = `payqrcode-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`; 
+                
+                const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${fileName}`, { 
+                    method: 'POST', 
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': compressedFile.type }, 
+                    body: compressedFile 
+                }); 
+                if (!uploadRes.ok) throw new Error('上传失败'); 
+                
+                const imageUrl = `${SUPABASE_URL}/storage/v1/object/public/product-images/${fileName}`; 
+                if (payQrCodeUrl) { await deleteStorageFile(payQrCodeUrl); } 
+                
+                const dbPayload = { name: 'pay_qr', category: '__pay_qr_code__', price: 0, in_stock: true, image_url: imageUrl }; 
+                let url = `${SUPABASE_URL}/rest/v1/products`; 
+                let method = 'POST'; 
+                if (payQrCodeId) { 
+                    url = `${SUPABASE_URL}/rest/v1/products?id=eq.${payQrCodeId}`; 
+                    method = 'PATCH'; 
+                } 
+                
+                const response = await fetch(url, { 
+                    method: method, 
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, 
+                    body: JSON.stringify(dbPayload) 
+                }); 
+                if (!response.ok) throw new Error('保存失败'); 
+                
+                showToast('收款码更新成功！', 'success'); 
                 try { localStorage.removeItem('ygf_products_cache'); } catch(e) { console.warn(e); } 
                 await fetchProducts(); 
             } catch (error) { 
