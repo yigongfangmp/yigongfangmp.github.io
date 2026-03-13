@@ -429,8 +429,9 @@
             <div style="font-size: 12px; color: #34C759; text-align: center; margin-bottom: 12px; font-weight: 500;"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" style="vertical-align: text-bottom;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> 实体店担保 · 预定金随时全额秒退</div>
             <div class="total-row"><span style="font-weight: 500; color: var(--text-secondary);">总计</span><span id="total-price">0.00</span></div>
             <div style="background: var(--accent-bg); border: 1px dashed var(--accent-color); padding: 12px; border-radius: 12px; margin-bottom: 12px;">
-                <div style="font-size: 13px; color: var(--accent-color); font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>留下联系方式，方便老板与您核对订单！</div>
-                <input type="text" id="buyer-contact" class="form-control" placeholder="请输入您的微信号或手机号" style="background: var(--card-color); border: none; padding: 12px; font-size: 16px;">
+                <div style="font-size: 13px; color: var(--accent-color); font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>联系方式与备注</div>
+                <input type="text" id="buyer-contact" class="form-control" placeholder="必填：微信号或手机号" style="background: var(--card-color); border: none; padding: 12px; font-size: 14px; margin-bottom: 8px;">
+                <input type="text" id="buyer-remark" class="form-control" placeholder="选填：付定金或商品备注 (30字内)" maxlength="30" style="background: var(--card-color); border: none; padding: 12px; font-size: 14px;">
             </div>
             <button class="checkout-btn" id="checkout-btn" onclick="checkout()">生成订单凭证</button>
         </div>
@@ -473,6 +474,7 @@
                 <button class="filter-btn" onclick="setAdminOrderFilter('new')">待处理</button>
                 <button class="filter-btn" onclick="setAdminOrderFilter('contacted')">已沟通</button>
                 <button class="filter-btn" onclick="setAdminOrderFilter('deposited')">已付定</button>
+                <button class="filter-btn" onclick="setAdminOrderFilter('shipped')">已发货</button>
                 <button class="filter-btn" onclick="setAdminOrderFilter('completed')">已成交</button>
             </div>
 
@@ -489,7 +491,7 @@
         </div>
     </div>
 
-<div class="cart-panel-overlay" id="admin-overlay" onclick="closeAdmin()"></div>
+    <div class="cart-panel-overlay" id="admin-overlay" onclick="closeAdmin()"></div>
     <div class="cart-panel" id="admin-panel">
         <div class="cart-header">
             <span id="admin-sheet-title">上架新商品</span>
@@ -514,7 +516,7 @@
                 <div class="form-group"><label id="label-name">装备名称</label><input type="text" class="form-control" id="new-name" placeholder="如: Ohlins 倒置前叉" required autocomplete="off"></div>
                 
                 <div class="form-group" style="display: flex; gap: 10px;">
-                    <div style="flex: 1;"><label>营销角标</label><select class="form-control" id="new-badge"><option value="">无角标</option><option value="hot">爆款推荐</option><option value="discount">特价限时</option><option value="new">新品上架</option><option value="clearance">清仓</option></select></div>
+                    <div style="flex: 1;"><label>营销角标</label><select class="form-control" id="new-badge"><option value="">无角标</option><option value="hot">爆款推荐</option><option value="discount">特价限时</option><option value="new">新品上架</option><option value="clearance">清仓处理</option></select></div>
                     <div style="flex: 1;"><label>出售价格</label><input type="number" step="0.01" min="0" class="form-control" id="new-price" placeholder="如: 18500" required></div>
                     <div style="flex: 1;"><label>实际库存</label><input type="number" min="0" step="1" class="form-control" id="new-stock" placeholder="件数" value="99" required></div>
                 </div>
@@ -705,7 +707,7 @@
             return `${name}_||_${config || ''}_||_${badge || ''}_||_${isPinned || false}_||_${stock !== undefined ? stock : 999}`; 
         }
 
-        const ORDER_STATUS_MAP = { 'new': '待处理', 'contacted': '已沟通', 'deposited': '已付定', 'completed': '已成交', 'canceled': '已跑单' };
+        const ORDER_STATUS_MAP = { 'new': '待处理', 'contacted': '已沟通', 'deposited': '已付定', 'shipped': '🚚 已发货', 'completed': '已成交', 'canceled': '已跑单' };
         
         function decodeOrderContact(rawContact) {
             if (!rawContact) return { status: 'new', contact: '' };
@@ -716,6 +718,13 @@
         
         function encodeOrderContact(contact, status) { 
             return `[${status || 'new'}]${contact}`; 
+        }
+
+        if (!document.getElementById('shipped-style')) {
+            const style = document.createElement('style');
+            style.id = 'shipped-style';
+            style.innerHTML = `.status-shipped { background: #E5F0FF !important; color: #007AFF !important; border: 1px solid rgba(0,122,255,0.3) !important; }`;
+            document.head.appendChild(style);
         }
 
         window.copyAnyText = async function(text) {
@@ -1194,7 +1203,7 @@
                 if (contactInfo.trim().length < 5) {
                     return showToast('联系方式太短，请输入真实的微信号或手机号', 'warning');
                 }
-                await processOrderSubmission([{...product, qty: 1}], contactInfo.trim(), null, false);
+                await processOrderSubmission([{...product, qty: 1}], contactInfo.trim(), '', null, false);
             }
         }
 
@@ -1203,6 +1212,8 @@
             if (cart.length === 0) return showToast('请先向清单选填商品！', 'warning');
 
             let contactInfo = document.getElementById('buyer-contact').value.trim();
+            let remarkInfo = document.getElementById('buyer-remark') ? document.getElementById('buyer-remark').value.trim() : '';
+
             if (!contactInfo) { 
                 const action = await showModal({ 
                     title: '<div style="display:flex;align-items:center;justify-content:center;gap:6px;"><svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>没留联系方式哦</div>', 
@@ -1218,10 +1229,14 @@
                 return showToast('联系方式太短，请输入真实的微信号或手机号', 'warning');
             }
 
-            await processOrderSubmission(cart, contactInfo, 'checkout-btn', true);
+            if (remarkInfo.length > 30) {
+                return showToast('备注请控制在30个字以内哦', 'warning');
+            }
+
+            await processOrderSubmission(cart, contactInfo, remarkInfo, 'checkout-btn', true);
         }
 
-        async function processOrderSubmission(itemsArray, contactInfo, btnId, isFromCart) {
+        async function processOrderSubmission(itemsArray, contactInfo, remarkInfo, btnId, isFromCart) {
             try { 
                 const lastSubmit = localStorage.getItem('yigongfang_last_submit_time'); 
                 if (lastSubmit && Date.now() - parseInt(lastSubmit) < 5000) { 
@@ -1245,7 +1260,12 @@
                 const randomCode = Math.floor(1000 + Math.random() * 9000); 
                 const orderNo = `YGF-${dateStr}-${randomCode}`;
                 
-                let orderText = `【壹工坊摩配 - 意向订单】\n订单编号：${orderNo}\n联系方式：${contactInfo || '未预留'}\n\n老板你好，这是我选好的商品：\n`; 
+                let orderText = `【壹工坊摩配 - 意向订单】\n订单编号：${orderNo}\n联系方式：${contactInfo || '未预留'}\n`;
+                if (remarkInfo) {
+                    orderText += `客户备注：${remarkInfo}\n`;
+                }
+                orderText += `\n老板你好，这是我选好的商品：\n`; 
+                
                 let totalCents = 0; 
                 
                 itemsArray.forEach((item, index) => { 
@@ -1332,7 +1352,7 @@
                                 const currentParsed = decodeProductName(pData[0].name);
                                 let newStock = currentParsed.stock - item.qty;
                                 if (newStock < 0) newStock = 0;
-                                const newInStock = pData[0].in_stock && newStock > 0; // 只要库存变0，直接变成售罄
+                                const newInStock = pData[0].in_stock && newStock > 0; 
                                 
                                 const newEncodedName = encodeProductName(currentParsed.name, currentParsed.config, currentParsed.badge, currentParsed.isPinned, newStock);
                                 
@@ -1347,7 +1367,7 @@
                     }
                     if (stockChanged) {
                         try { localStorage.removeItem('ygf_products_cache'); } catch(e) {}
-                        fetchProducts(); // 后台静默刷新列表让库存变动生效
+                        fetchProducts(); 
                     }
                 } catch(e) { console.warn('库存扣除异常', e); }
 
@@ -1355,6 +1375,7 @@
                     cart = []; 
                     updateCart(); 
                     document.getElementById('buyer-contact').value = '';
+                    if(document.getElementById('buyer-remark')) document.getElementById('buyer-remark').value = '';
                 }
                 
                 const qrImgSrc = qrCodeUrl ? escapeHTML(qrCodeUrl) : 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=weixin://contacts/profile/wxid_w5lxkhqtn06w22';
@@ -1401,7 +1422,6 @@
                             </button>
                             <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">(进微信后直接粘贴发送给老板即可)</div>
                         </div>
-
                     </div>`,
                     confirmText: '好的，已了解', 
                     cancelText: '导航去门店'
@@ -1746,13 +1766,39 @@
             const newStatus = window.tempStatusResolveValue;
             
             if (newStatus && newStatus !== currentStatus && typeof newStatus === 'string') {
+                
+                let trackingText = '';
+                if (newStatus === 'shipped') {
+                    const trackingInfo = await showModal({
+                        title: '🚚 填写发货信息 (可选)',
+                        desc: '输入快递公司和单号，顾客查单时能直接看到进度：<br><span style="font-size:11px;color:var(--text-secondary);">(不需要就留空，直接点确认发货)</span>',
+                        type: 'prompt',
+                        confirmText: '确认发货'
+                    });
+                    
+                    if (trackingInfo === false || trackingInfo === 'close') return; 
+                    
+                    if (trackingInfo.trim()) {
+                        trackingText = `\n\n━━━━━━━━━━━━━━\n📦【物流更新】\n时间：${formatDate(new Date().toISOString())}\n进度：已发货\n单号：${trackingInfo.trim()}\n━━━━━━━━━━━━━━`;
+                    }
+                }
+
                 showToast('更新中...', 'info');
                 try {
                     const newContactField = encodeOrderContact(contactRaw, newStatus);
+                    let payload = { contact: newContactField };
+                    
+                    if (trackingText) {
+                        const targetOrder = globalActiveOrders.find(o => String(o.id) === String(orderId));
+                        if (targetOrder && targetOrder.content) {
+                            payload.content = targetOrder.content + trackingText;
+                        }
+                    }
+
                     const response = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`, { 
                         method: 'PATCH', 
                         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, 
-                        body: JSON.stringify({ contact: newContactField }) 
+                        body: JSON.stringify(payload) 
                     });
                     if (!response.ok) throw new Error();
                     showToast('状态已更新', 'success');
