@@ -853,22 +853,24 @@
         }
 
         let globalModalResolve = null;
-        let _modalFocusTimer = null;
+        let globalModalCleanup = null;
         
         function closeCustomModal() { 
             if (globalModalResolve) { 
-                document.getElementById('custom-modal').classList.remove('active'); 
-                toggleBodyScroll(); 
-                globalModalResolve('close'); 
-                globalModalResolve = null; 
+                const resolveFn = globalModalResolve;
+                if (globalModalCleanup) globalModalCleanup();
+                resolveFn('close'); 
             } 
         }
         
         function showModal({ title, desc = '', type = 'confirm', confirmText = '确定', cancelText = '取消' }) {
             return new Promise((resolve) => { 
-                if (globalModalResolve) globalModalResolve('close'); 
+                if (globalModalResolve) { 
+                    const res = globalModalResolve;
+                    if (globalModalCleanup) globalModalCleanup();
+                    res('close');
+                } 
                 globalModalResolve = resolve; 
-                clearTimeout(_modalFocusTimer);
                 
                 const overlay = document.getElementById('custom-modal'); 
                 const titleEl = document.getElementById('modal-title'); 
@@ -894,44 +896,34 @@
                 } 
                 
                 confirmBtn.innerText = confirmText; 
-                if (cancelText) {
-                    cancelBtn.style.display = 'block';
-                    cancelBtn.innerText = cancelText;
-                    confirmBtn.style.borderLeft = '0.5px solid var(--divider)';
-                } else {
-                    cancelBtn.style.display = 'none';
-                    confirmBtn.style.borderLeft = 'none';
-                }
+                cancelBtn.innerText = cancelText; 
+                
+                let modalFocusTimeout = null;
                 
                 if (type === 'prompt') { 
                     inputEl.style.display = 'block'; 
                     inputEl.value = ''; 
-                    _modalFocusTimer = setTimeout(() => {
-                        if(overlay.classList.contains('active')) inputEl.focus();
-                    }, 300); 
+                    modalFocusTimeout = setTimeout(() => inputEl.focus(), 300); 
                 } else { 
                     inputEl.style.display = 'none'; 
-                    inputEl.value = ''; // clean up the value
                 } 
                 
                 overlay.classList.add('active'); 
                 toggleBodyScroll(); 
                 
-                const cleanup = () => { 
-                    clearTimeout(_modalFocusTimer);
+                globalModalCleanup = () => { 
+                    clearTimeout(modalFocusTimeout);
                     overlay.classList.remove('active'); 
                     inputEl.blur(); 
                     toggleBodyScroll(); 
                     cancelBtn.onclick = null; 
                     confirmBtn.onclick = null; 
                     globalModalResolve = null; 
+                    globalModalCleanup = null;
                 }; 
                 
-                cancelBtn.onclick = () => { cleanup(); resolve(false); }; 
-                confirmBtn.onclick = () => { 
-                    cleanup(); 
-                    resolve((type === 'prompt' || type === 'select') ? inputEl.value : true); 
-                }; 
+                cancelBtn.onclick = () => { globalModalCleanup(); resolve(false); }; 
+                confirmBtn.onclick = () => { globalModalCleanup(); resolve(type === 'prompt' ? inputEl.value : true); }; 
             });
         }
 
@@ -1431,9 +1423,6 @@
                 
                 try { localStorage.setItem('yigongfang_last_contact', contactInput); } catch(e){ console.warn(e); }
 
-                const scrollWrapper = document.querySelector('#user-orders-panel .cart-content');
-                let st = 0; if (scrollWrapper) st = scrollWrapper.scrollTop;
-
                 resultContainer.innerHTML = orders.map(order => {
                     const cleanContent = (order.content || '').trim();
                     const isArchived = order.is_archived === true;
@@ -1458,15 +1447,6 @@
                         </button>
                     </div>`
                 }).join('');
-
-                // Force layout reflow to prevent iOS smooth scrolling freeze
-                if (scrollWrapper) {
-                    scrollWrapper.style.overflowY = 'hidden';
-                    scrollWrapper.offsetHeight;
-                    scrollWrapper.style.overflowY = 'auto';
-                    scrollWrapper.scrollTop = st;
-                }
-
             } catch (err) {
                 resultContainer.innerHTML = '<div class="empty-state">查询失败，请检查网络后再试</div>';
             } finally {
@@ -1598,9 +1578,6 @@
                 return; 
             }
             
-            const scrollWrapper = document.querySelector('#orders-panel .cart-content');
-            let st = 0; if (scrollWrapper) st = scrollWrapper.scrollTop;
-
             content.innerHTML = filtered.map(order => {
                 const parsed = decodeOrderContact(order.contact);
                 const statusText = ORDER_STATUS_MAP[parsed.status] || '状态未知';
@@ -1624,14 +1601,6 @@
                     <div class="order-content-box">${escapeHTML(order.content || '')}</div>
                 </div>`
             }).join('');
-
-            // Force reflow for iOS scroll bug
-            if (scrollWrapper) {
-                scrollWrapper.style.overflowY = 'hidden';
-                scrollWrapper.offsetHeight;
-                scrollWrapper.style.overflowY = 'auto';
-                scrollWrapper.scrollTop = st;
-            }
         }
 
         let isDeepSearching = false;
@@ -1665,9 +1634,6 @@
                     return;
                 }
                 
-                const scrollWrapper = document.querySelector('#orders-panel .cart-content');
-                let st = 0; if (scrollWrapper) st = scrollWrapper.scrollTop;
-
                 content.innerHTML = `<div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; font-weight: 500; display:flex; justify-content:space-between; align-items:center;"><span>云端检索到 ${searchResults.length} 条结果（含已归档）</span><span style="color:var(--accent-color); cursor:pointer; font-weight:600;" onclick="document.getElementById('order-search-input').value=''; openOrdersPanel(true);">清除搜索</span></div>` + searchResults.map(order => {
                     const parsed = decodeOrderContact(order.contact);
                     const statusText = ORDER_STATUS_MAP[parsed.status] || '状态未知';
@@ -1693,13 +1659,6 @@
                         <div class="order-content-box">${escapeHTML(order.content || '')}</div>
                     </div>`
                 }).join('');
-
-                if (scrollWrapper) {
-                    scrollWrapper.style.overflowY = 'hidden';
-                    scrollWrapper.offsetHeight;
-                    scrollWrapper.style.overflowY = 'auto';
-                    scrollWrapper.scrollTop = st;
-                }
             } catch (e) {
                 content.innerHTML = '<div class="empty-state">云端检索失败，请检查网络</div>';
             } finally {
@@ -1709,20 +1668,20 @@
         }
 
         async function changeOrderStatus(orderId, currentStatus, contactRaw) {
-            const optionsHtml = Object.keys(ORDER_STATUS_MAP).map(key => 
-                `<div style="padding: 14px; border-bottom: 0.5px solid var(--divider); color: ${key===currentStatus ? 'var(--accent-color)' : 'var(--text-primary)'}; font-weight: ${key===currentStatus ? 'bold' : 'normal'}; font-size: 15px; cursor: pointer;" 
-                onclick="document.getElementById('modal-input').value='${key}'; document.getElementById('modal-confirm').click();">${ORDER_STATUS_MAP[key]}</div>`
-            ).join('');
+            window.tempStatusResolveValue = null;
+            const optionsHtml = Object.keys(ORDER_STATUS_MAP).map(key => `<div style="padding: 12px; border-bottom: 1px solid var(--divider); color: ${key===currentStatus ? 'var(--accent-color)' : 'var(--text-primary)'}; font-weight: ${key===currentStatus ? 'bold' : 'normal'}; cursor: pointer;" onclick="window.tempStatusResolveValue='${key}'; closeCustomModal();">${ORDER_STATUS_MAP[key]}</div>`).join('');
             
-            const newStatus = await showModal({ 
+            await showModal({ 
                 title: '修改追踪状态', 
-                desc: `<div style="text-align:center; max-height: 50vh; overflow-y:auto; margin: 10px -20px -24px; border-top: 0.5px solid var(--divider);">${optionsHtml}</div>`, 
-                type: 'select', // 阻止iOS键盘弹起的核心改动
-                confirmText: '取消', 
-                cancelText: '' // 隐藏多余的取消按钮
+                desc: `<div style="text-align:center; max-height: 200px; overflow-y:auto; -webkit-overflow-scrolling: touch;">${optionsHtml}</div>`, 
+                type: 'confirm', 
+                confirmText: '暂不修改',
+                cancelText: '关闭窗口'
             });
             
-            if (newStatus && typeof newStatus === 'string' && newStatus !== currentStatus && newStatus !== 'close') {
+            const newStatus = window.tempStatusResolveValue;
+            
+            if (newStatus && newStatus !== currentStatus && typeof newStatus === 'string') {
                 showToast('更新中...', 'info');
                 try {
                     const newContactField = encodeOrderContact(contactRaw, newStatus);
@@ -2429,4 +2388,393 @@
             try { 
                 const existingProduct = products.find(p => String(p.id) === String(idStr)); 
                 if (existingProduct && existingProduct.image_url) { 
-                    const oldUrls = existingProduct.image_url.split(',').filter
+                    const oldUrls = existingProduct.image_url.split(',').filter(Boolean); 
+                    oldUrls.forEach(url => deleteStorageFile(url)); 
+                } 
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${idStr}`, { 
+                    method: 'DELETE', 
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
+                }); 
+                if (!response.ok) throw new Error(await response.text()); 
+                
+                showToast('已下架', 'success'); 
+                try { localStorage.removeItem('ygf_products_cache'); } catch(e) { console.warn(e); } 
+                closeAdmin(); 
+                await fetchProducts(); 
+            } catch (error) { 
+                showToast('下架失败', 'error'); 
+            } finally { 
+                btn.disabled = false; 
+            } 
+        }
+
+        function openAdmin() { 
+            if (!isAdmin) return; 
+            closeAllPanels(); 
+            document.getElementById('add-product-form').reset(); 
+            document.getElementById('edit-product-id').value = ''; 
+            document.getElementById('new-image').value = ''; 
+            currentUploadedUrls = []; 
+            currentNewFiles = []; 
+            urlsToDelete = []; 
+            renderAdminImagePreview(); 
+            document.getElementById('new-item-type').value = currentZone === 'used_cars' ? 'used_car' : 'part'; 
+            toggleAdminFormType(); 
+            document.getElementById('new-instock').checked = true; 
+            toggleStockLabel(true); 
+            document.getElementById('new-ispinned').checked = false; 
+            togglePinLabel(false); 
+            document.getElementById('new-badge').value = ''; 
+            document.getElementById('admin-sheet-title').innerText = '上架新商品'; 
+            document.getElementById('submit-btn').innerText = '确认上架'; 
+            document.getElementById('delete-btn').style.display = 'none'; 
+            document.getElementById('admin-panel').classList.add('active'); 
+            document.getElementById('admin-overlay').classList.add('active'); 
+            toggleBodyScroll(); 
+        }
+
+        function openEditAdmin(id) { 
+            if (!isAdmin) return; 
+            closeAllPanels(); 
+            const product = products.find(p => String(p.id) === String(id)); 
+            if (!product) return; 
+            
+            document.getElementById('edit-product-id').value = product.id; 
+            const isUsedCar = product.category && product.category.startsWith('used_'); 
+            document.getElementById('new-item-type').value = isUsedCar ? 'used_car' : 'part'; 
+            toggleAdminFormType(); 
+            
+            const parsed = decodeProductName(product.name); 
+            if (isUsedCar) { 
+                document.getElementById('new-name').value = parsed.name || ''; 
+                document.getElementById('new-config').value = parsed.config || ''; 
+                const catSelect = document.getElementById('new-category'); 
+                const catExists = Array.from(catSelect.options).some(opt => opt.value === product.category); 
+                if (catExists) { 
+                    catSelect.value = product.category; 
+                } else { 
+                    catSelect.value = 'custom'; 
+                    document.getElementById('custom-category-input').style.display = 'block'; 
+                    document.getElementById('custom-category-input').value = product.category.replace('used_', ''); 
+                } 
+            } else { 
+                document.getElementById('new-name').value = parsed.name; 
+                document.getElementById('new-category').value = product.category; 
+            } 
+            
+            document.getElementById('new-price').value = product.price; 
+            document.getElementById('new-image').value = ''; 
+            document.getElementById('new-badge').value = parsed.badge || ''; 
+            
+            const isInStock = product.in_stock !== false; 
+            document.getElementById('new-instock').checked = isInStock; 
+            toggleStockLabel(isInStock); 
+            
+            document.getElementById('new-ispinned').checked = parsed.isPinned; 
+            togglePinLabel(parsed.isPinned); 
+            
+            currentUploadedUrls = product.image_url ? product.image_url.split(',').filter(Boolean) : []; 
+            currentNewFiles = []; 
+            urlsToDelete = []; 
+            renderAdminImagePreview(); 
+            
+            document.getElementById('admin-sheet-title').innerText = '编辑商品信息'; 
+            document.getElementById('submit-btn').innerText = '保存修改'; 
+            document.getElementById('delete-btn').style.display = 'block'; 
+            document.getElementById('admin-panel').classList.add('active'); 
+            document.getElementById('admin-overlay').classList.add('active'); 
+            toggleBodyScroll(); 
+        }
+
+        function closeAdmin() { 
+            const panel = document.getElementById('admin-panel');
+            if (panel.classList.contains('active')) {
+                panel.classList.remove('active'); 
+                document.getElementById('admin-overlay').classList.remove('active'); 
+                toggleBodyScroll(); 
+                document.querySelectorAll('.form-control').forEach(el => el.blur()); 
+                document.getElementById('new-image').value = ''; 
+            }
+        }
+
+        function openCart() { 
+            closeAllPanels(); 
+            document.getElementById('cart-panel').classList.add('active'); 
+            document.getElementById('cart-overlay').classList.add('active'); 
+            toggleBodyScroll(); 
+        }
+
+        function closeCart() { 
+            const panel = document.getElementById('cart-panel');
+            if (panel.classList.contains('active')) {
+                panel.classList.remove('active'); 
+                document.getElementById('cart-overlay').classList.remove('active'); 
+                toggleBodyScroll(); 
+            }
+        }
+
+        function closeAllPanels() { 
+            closeCart(); 
+            closeAdmin(); 
+            closeCarDetails(); 
+            closeOrdersPanel(); 
+            closeUserOrders(); 
+        }
+
+        async function handleShopImageUpload(event) { 
+            if (!isAdmin) return; 
+            const file = event.target.files[0]; 
+            if (!file) return; 
+            showToast('正在压缩并上传...', 'info'); 
+            try { 
+                const compressedFile = await compressImage(file, 1200, 1200, 0.8);
+                const fileExt = 'jpg'; 
+                const fileName = `shop-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`; 
+                
+                const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${fileName}`, { 
+                    method: 'POST', 
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': compressedFile.type }, 
+                    body: compressedFile 
+                }); 
+                if (!uploadRes.ok) throw new Error('上传失败'); 
+                
+                const imageUrl = `${SUPABASE_URL}/storage/v1/object/public/product-images/${fileName}`; 
+                const dbPayload = { name: 'shop_image', category: '__shop_gallery__', price: 0, in_stock: true, image_url: imageUrl }; 
+                
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/products`, { 
+                    method: 'POST', 
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(dbPayload) 
+                }); 
+                if (!response.ok) throw new Error('保存失败'); 
+                
+                showToast('上传成功！', 'success'); 
+                try { localStorage.removeItem('ygf_products_cache'); } catch(e) { console.warn(e); } 
+                await fetchProducts(); 
+            } catch (error) { 
+                showToast('上传失败', 'error'); 
+            } finally { 
+                event.target.value = ''; 
+            } 
+        }
+
+        async function handleQRUpload(event) { 
+            if (!isAdmin) return; 
+            const file = event.target.files[0]; 
+            if (!file) return; 
+            showToast('正在压缩并更新二维码...', 'info'); 
+            try { 
+                const compressedFile = await compressImage(file, 800, 800, 0.9);
+                const fileExt = 'jpg'; 
+                const fileName = `qrcode-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`; 
+                
+                const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${fileName}`, { 
+                    method: 'POST', 
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': compressedFile.type }, 
+                    body: compressedFile 
+                }); 
+                if (!uploadRes.ok) throw new Error('上传失败'); 
+                
+                const imageUrl = `${SUPABASE_URL}/storage/v1/object/public/product-images/${fileName}`; 
+                if (qrCodeUrl) { await deleteStorageFile(qrCodeUrl); } 
+                
+                const dbPayload = { name: 'wechat_qr', category: '__qr_code__', price: 0, in_stock: true, image_url: imageUrl }; 
+                let url = `${SUPABASE_URL}/rest/v1/products`; 
+                let method = 'POST'; 
+                if (qrCodeId) { 
+                    url = `${SUPABASE_URL}/rest/v1/products?id=eq.${qrCodeId}`; 
+                    method = 'PATCH'; 
+                } 
+                
+                const response = await fetch(url, { 
+                    method: method, 
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, 
+                    body: JSON.stringify(dbPayload) 
+                }); 
+                if (!response.ok) throw new Error('保存失败'); 
+                
+                showToast('二维码更新成功！', 'success'); 
+                try { localStorage.removeItem('ygf_products_cache'); } catch(e) { console.warn(e); } 
+                await fetchProducts(); 
+            } catch (error) { 
+                showToast('上传失败', 'error'); 
+            } finally { 
+                event.target.value = ''; 
+            } 
+        }
+
+        async function deleteShopImage(id) { 
+            if (!isAdmin) return; 
+            const confirmed = await showModal({ title: '删除照片', desc: '确定删除吗？', confirmText: '删除', cancelText: '取消' }); 
+            if (confirmed !== true) return; 
+            showToast('正在删除...', 'info'); 
+            try { 
+                const existingImg = shopImages.find(i => String(i.id) === String(id)); 
+                if (existingImg && existingImg.image_url) { 
+                    await deleteStorageFile(existingImg.image_url); 
+                } 
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}`, { 
+                    method: 'DELETE', 
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
+                }); 
+                if (!response.ok) throw new Error('删除失败'); 
+                
+                showToast('已删除', 'success'); 
+                try { localStorage.removeItem('ygf_products_cache'); } catch(e) { console.warn(e); } 
+                await fetchProducts(); 
+            } catch (error) { 
+                showToast('删除失败', 'error'); 
+            } 
+        }
+
+        function renderShopGallery() { 
+            const wrapper = document.getElementById('shop-gallery-wrapper'); 
+            if (!wrapper) return; 
+            
+            if (shopImages.length === 0 && !isAdmin) { 
+                wrapper.innerHTML = ''; 
+                return; 
+            } 
+            
+            let html = `<div class="shop-gallery-title">门店实景展示</div><div class="shop-gallery">`; 
+            shopImages.forEach(img => { 
+                html += `<div class="gallery-item-wrap"><img src="${escapeHTML(img.image_url)}" onclick="openImageViewer(this.src)">${isAdmin ? `<button class="del-gallery-btn" onclick="deleteShopImage('${escapeJS(String(img.id))}')"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>` : ''}</div>`; 
+            }); 
+            
+            if (isAdmin) {
+                html += `<div class="upload-gallery-btn" onclick="document.getElementById('shop-image-upload').click()"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>添加照片</div>`; 
+            }
+            html += `</div>`; 
+            wrapper.innerHTML = html; 
+        }
+        
+        let isMapLoaded = false;
+        let isMapLoading = false;
+        function openMapModal() { 
+            triggerHaptic(); 
+            closeAllPanels(); 
+            document.getElementById('map-modal-overlay').classList.add('active'); 
+            toggleBodyScroll(); 
+            
+            if (isMapLoaded && window.shopMap) {
+                setTimeout(() => { window.shopMap.invalidateSize(); window.dispatchEvent(new Event('resize')); }, 350);
+            } else if (!isMapLoading) {
+                isMapLoading = true;
+                showToast('正在加载地图...', 'info');
+                
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
+                document.head.appendChild(link);
+                
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
+                script.onload = () => {
+                    isMapLoaded = true;
+                    isMapLoading = false;
+                    initMap();
+                    setTimeout(() => { if(window.shopMap) { window.shopMap.invalidateSize(); window.dispatchEvent(new Event('resize')); } }, 350);
+                };
+                document.body.appendChild(script);
+            }
+        }
+
+        function closeMapModal() { 
+            const overlay = document.getElementById('map-modal-overlay');
+            if (overlay.classList.contains('active')) {
+                overlay.classList.remove('active'); 
+                toggleBodyScroll(); 
+            }
+        }
+
+        window.openAmapNavi = function() { 
+            triggerHaptic(); 
+            
+            if (isWeChat) {
+                return showToast('微信内无法直接唤起，请点击右上角在浏览器中打开', 'warning');
+            }
+
+            const dlat = 39.5211925;
+            const dlon = 116.6959995;
+            const dname = encodeURIComponent('壹工坊摩配');
+            
+            const iosScheme = `iosamap://path?sourceApplication=YGF&dlat=${dlat}&dlon=${dlon}&dname=${dname}&dev=0&t=0`;
+            const androidScheme = `amapuri://route/plan/?dlat=${dlat}&dlon=${dlon}&dname=${dname}&dev=0&t=0`;
+            const scheme = isIOS ? iosScheme : androidScheme;
+            
+            window.location.href = scheme;
+            
+            const startTime = Date.now(); 
+            setTimeout(() => { 
+                if (!document.hidden && !document.webkitHidden && Date.now() - startTime <= 2200) {
+                    showToast('未检测到高德地图，请确认是否安装', 'warning');
+                } 
+            }, 2000); 
+        }
+
+        function initMap() { 
+            window.shopMap = L.map('shop-map', { attributionControl: false }).setView([39.5211925, 116.6959995], 15); 
+            L.tileLayer('https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=1&style=7', { maxZoom: 19 }).addTo(window.shopMap); 
+            L.marker([39.5211925, 116.6959995], {
+                icon: L.divIcon({ 
+                    className: 'custom-map-marker', 
+                    html: `<div style="background: var(--accent-color); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px var(--accent-shadow); border: 2.5px solid white;"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></div>`, 
+                    iconSize: [32, 32], 
+                    iconAnchor: [16, 16] 
+                })
+            }).addTo(window.shopMap); 
+        }
+
+        function checkDisclaimer() { 
+            try { 
+                const hasAgreed = localStorage.getItem('yigongfang_disclaimer_agreed'); 
+                if (!hasAgreed) { 
+                    const modal = document.getElementById('disclaimer-modal'); 
+                    setTimeout(() => { 
+                        modal.classList.add('active'); 
+                        toggleBodyScroll(); 
+                    }, 100); 
+                    document.getElementById('disclaimer-agree-btn').onclick = function() { 
+                        triggerHaptic(); 
+                        try { localStorage.setItem('yigongfang_disclaimer_agreed', 'true'); } catch(e) { console.warn(e); } 
+                        modal.classList.remove('active'); 
+                        toggleBodyScroll(); 
+                    }; 
+                } 
+            } catch(e) { console.warn(e); } 
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                if (isWeChat) document.documentElement.classList.add('is-wechat');
+                document.getElementById('tab-parts').classList.toggle('active', currentZone === 'parts');
+                document.getElementById('tab-used').classList.toggle('active', currentZone === 'used_cars');
+                
+                initCartFromStorage(); 
+                initFiltersDOM(); 
+                
+                if (isAdmin) {
+                    document.getElementById('top-add-btn').classList.remove('admin-only');
+                    document.getElementById('top-orders-btn').classList.remove('admin-only');
+                    pollOrders(); 
+                    orderPollInterval = setInterval(pollOrders, 60000); 
+                }
+                
+                document.querySelectorAll('input, select').forEach(el => { 
+                    el.addEventListener('focus', () => { 
+                        if (window.innerWidth <= 768) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300); 
+                    }); 
+                });
+                
+                updateCart(); 
+                checkDisclaimer(); 
+                initImageViewerTouch();
+
+                await fetchProducts(); 
+            } catch (err) {
+                console.error("Initialization Failed:", err);
+            }
+        });
+    </script>
+</body>
+</html>
