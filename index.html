@@ -2001,11 +2001,16 @@ function getPartCategories() {
             return [...categories, ...Array.from(uniqueCats).map(([id, name]) => ({id, name}))];
         }
 
-        function initFiltersDOM() { 
+function initFiltersDOM() { 
             const filterBar = document.getElementById('filter-bar'); 
             if (currentZone === 'parts') { 
-                const partCats = getPartCategories();
-                filterBar.innerHTML = partCats.map(cat => `<button class="filter-btn ${cat.id === currentCategory ? 'active' : ''}" data-id="${cat.id}" onclick="setFilter('${escapeJS(cat.id)}')">${escapeHTML(cat.name)}</button>`).join(''); 
+                const allPartsCats = [...categories, ...(window.customCategories || [])];
+                let html = allPartsCats.map(cat => `<button class="filter-btn ${cat.id === currentCategory ? 'active' : ''}" data-id="${cat.id}" onclick="setFilter('${escapeJS(cat.id)}')">${escapeHTML(cat.name)}</button>`).join(''); 
+                
+                if (isAdmin) {
+                    html += `<button class="filter-btn" style="border: 1px dashed var(--text-secondary); color: var(--text-secondary); padding: 6px 12px; background: transparent;" onclick="addNewCategory()">➕ 添加分类</button>`;
+                }
+                filterBar.innerHTML = html;
             } else { 
                 const usedCats = [{id: 'used_all', name: '全部车型'}, ...getUsedCarCategories()]; 
                 filterBar.innerHTML = usedCats.map(cat => `<button class="filter-btn ${cat.id === currentUsedCategory ? 'active' : ''}" data-id="${cat.id}" onclick="setFilter('${escapeJS(cat.id)}')">${escapeHTML(cat.name)}</button>`).join(''); 
@@ -2014,6 +2019,70 @@ function getPartCategories() {
                 const activeBtn = document.querySelector('.filter-btn.active'); 
                 if (activeBtn && window.innerWidth <= 768) activeBtn.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' }); 
             }, 100); 
+        }
+
+        async function addNewCategory() {
+            if (!isAdmin) return;
+            const newCatName = await showModal({ 
+                title: '添加新配件分类', 
+                desc: '请输入新的筛选按钮名称（如：尾箱、风挡）<br><span style="font-size:12px;color:var(--text-secondary);display:block;margin-top:8px;">提示：若需删除自定义分类，只需在选中它时，再次点击该分类按钮即可。</span>', 
+                type: 'prompt', 
+                confirmText: '确认添加' 
+            });
+            if (newCatName && newCatName !== 'close') {
+                const name = newCatName.trim();
+                if (!name) return showToast('分类名称不能为空', 'warning');
+                const allPartsCats = [...categories, ...(window.customCategories || [])];
+                if (allPartsCats.some(c => c.name === name)) {
+                    return showToast('该分类已存在', 'warning');
+                }
+                
+                showToast('正在创建...', 'info');
+                try {
+                    const dbPayload = { name: name, category: '__category__', price: 0, in_stock: true, image_url: '' }; 
+                    const response = await fetch(`${SUPABASE_URL}/rest/v1/products`, { 
+                        method: 'POST', 
+                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify(dbPayload) 
+                    }); 
+                    if (!response.ok) throw new Error('添加失败'); 
+                    
+                    showToast('分类添加成功', 'success'); 
+                    try { localStorage.removeItem('ygf_products_cache'); } catch(e) {} 
+                    await fetchProducts(); 
+                    setTimeout(() => {
+                        const filterBar = document.getElementById('filter-bar');
+                        if (filterBar) filterBar.scrollLeft = filterBar.scrollWidth;
+                    }, 500);
+                } catch(e) { showToast('添加失败', 'error'); }
+            }
+        }
+
+        async function showDeleteCategoryModal(catId) {
+            const cat = (window.customCategories || []).find(c => c.id === catId);
+            if (!cat) return;
+            const confirmed = await showModal({
+                title: '删除分类',
+                desc: `确定要删除分类“${escapeHTML(cat.name)}”吗？<br><span style="font-size:12px;color:var(--accent-color);display:block;margin-top:6px;">注意：该分类下的商品不会被删除，但将失去此分类标签。</span>`,
+                confirmText: '删除',
+                cancelText: '取消'
+            });
+            if (confirmed === true) {
+                showToast('正在删除...', 'info');
+                try {
+                    await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${cat.dbId}`, { 
+                        method: 'DELETE', 
+                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
+                    });
+                    showToast('分类已删除', 'success');
+                    if (currentCategory === catId) {
+                        currentCategory = 'all';
+                        try { sessionStorage.setItem('yigongfang_category', 'all'); } catch(e){} 
+                    }
+                    try { localStorage.removeItem('ygf_products_cache'); } catch(e) {} 
+                    await fetchProducts(); 
+                } catch(e) { showToast('删除失败', 'error'); }
+            }
         }
 
         function switchZone(zone) { 
@@ -2028,6 +2097,12 @@ function getPartCategories() {
 
         function setFilter(id) { 
             triggerHaptic(); 
+            // 如果老板模式下，点的是已经处于选中状态的自定义分类，则触发删除提示
+            if (isAdmin && currentZone === 'parts' && id === currentCategory && id.startsWith('custom_')) {
+                showDeleteCategoryModal(id);
+                return;
+            }
+
             if (currentZone === 'parts') { 
                 currentCategory = id; 
                 try { sessionStorage.setItem('yigongfang_category', id); } catch(e){ console.warn(e); } 
@@ -2319,7 +2394,18 @@ function getPartCategories() {
             
             announcementData = allData.find(p => p.category === '__announcement__');
             shopImages = allData.filter(p => p.category === '__shop_gallery__'); 
-            products = allData.filter(p => p.category !== '__shop_gallery__' && p.category !== '__qr_code__' && p.category !== '__announcement__' && p.category !== '__pay_qr_code__'); 
+            
+            // 解析所有老板单独添加的自定义分类
+            const rawCustomCats = allData.filter(p => p.category === '__category__');
+            window.customCategories = rawCustomCats.map(p => ({ id: `custom_${p.id}`, name: p.name, dbId: p.id }));
+
+            products = allData.filter(p => 
+                p.category !== '__shop_gallery__' && 
+                p.category !== '__qr_code__' && 
+                p.category !== '__announcement__' && 
+                p.category !== '__pay_qr_code__' &&
+                p.category !== '__category__'
+            ); 
         }
 
         async function fetchProducts() {
@@ -2445,9 +2531,8 @@ function getPartCategories() {
             if (type === 'part') { 
                 nameLabel.innerText = "装备名称"; 
                 configGroup.style.display = 'none'; 
-                const partCats = getPartCategories();
-                catSelect.innerHTML = partCats.filter(c => c.id !== 'all').map(cat => `<option value="${cat.id}">${escapeHTML(cat.name)}</option>`).join(''); 
-                catSelect.innerHTML += `<option value="custom">➕ 手动添加新分类...</option>`; 
+                const allPartsCats = [...categories, ...(window.customCategories || [])];
+                catSelect.innerHTML = allPartsCats.filter(c => c.id !== 'all').map(cat => `<option value="${cat.id}">${escapeHTML(cat.name)}</option>`).join(''); 
             } else { 
                 nameLabel.innerText = "车型名称 (如: 小牛N1S)"; 
                 configGroup.style.display = 'block'; 
@@ -2485,15 +2570,15 @@ function getPartCategories() {
             const isUsedCar = document.getElementById('new-item-type').value === 'used_car'; 
             let category = document.getElementById('new-category').value; 
             
-            if (category === 'custom') { 
-                const customVal = document.getElementById('custom-category-input').value.trim(); 
+            if (isUsedCar && category === 'custom') { 
+                const customVal = document.getElementById('custom-category-input').value.trim().replace(/[\s,]+/g, '_'); 
                 if (!customVal) { 
-                    showToast('请输入新分类名称', 'warning'); 
+                    showToast('请输入新车型名称', 'warning'); 
                     btn.disabled = false; 
                     btn.innerText = originalText; 
                     return; 
                 } 
-                category = isUsedCar ? 'used_' + customVal.replace(/[\s,]+/g, '_') : customVal; 
+                category = 'used_' + customVal; 
             } 
             
             let nameRaw = document.getElementById('new-name').value.trim(); 
@@ -2659,9 +2744,8 @@ function getPartCategories() {
                 if (catExists) { 
                     catSelect.value = product.category; 
                 } else { 
-                    catSelect.value = 'custom'; 
-                    document.getElementById('custom-category-input').style.display = 'block'; 
-                    document.getElementById('custom-category-input').value = product.category; 
+                    catSelect.innerHTML += `<option value="${product.category}">${product.category} (已删除的分类)</option>`;
+                    catSelect.value = product.category; 
                 }
             } 
             
