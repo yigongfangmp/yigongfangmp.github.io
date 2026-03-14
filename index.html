@@ -811,9 +811,8 @@
                     if (document.body.classList.contains('no-scroll')) { 
                         document.body.classList.remove('no-scroll'); 
                         document.body.style.top = ''; 
-                        setTimeout(() => {
-                            window.scrollTo(0, scrollPosition); 
-                        }, 10);
+                        // 🚀 修复点：去掉 setTimeout，改为同步执行恢复滚动，完美解决闪烁！
+                        window.scrollTo(0, scrollPosition); 
                     } 
                 }
             }, 15);
