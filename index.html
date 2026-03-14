@@ -1990,10 +1990,22 @@
             return [...defaults, ...Array.from(uniqueCats).map(([id, name]) => ({id, name}))]; 
         }
 
+function getPartCategories() {
+            const defaultIds = categories.map(c => c.id);
+            const uniqueCats = new Map();
+            products.forEach(p => {
+                if (p.category && !p.category.startsWith('__') && !p.category.startsWith('used_') && !defaultIds.includes(p.category)) {
+                    uniqueCats.set(p.category, p.category);
+                }
+            });
+            return [...categories, ...Array.from(uniqueCats).map(([id, name]) => ({id, name}))];
+        }
+
         function initFiltersDOM() { 
             const filterBar = document.getElementById('filter-bar'); 
             if (currentZone === 'parts') { 
-                filterBar.innerHTML = categories.map(cat => `<button class="filter-btn ${cat.id === currentCategory ? 'active' : ''}" data-id="${cat.id}" onclick="setFilter('${escapeJS(cat.id)}')">${escapeHTML(cat.name)}</button>`).join(''); 
+                const partCats = getPartCategories();
+                filterBar.innerHTML = partCats.map(cat => `<button class="filter-btn ${cat.id === currentCategory ? 'active' : ''}" data-id="${cat.id}" onclick="setFilter('${escapeJS(cat.id)}')">${escapeHTML(cat.name)}</button>`).join(''); 
             } else { 
                 const usedCats = [{id: 'used_all', name: '全部车型'}, ...getUsedCarCategories()]; 
                 filterBar.innerHTML = usedCats.map(cat => `<button class="filter-btn ${cat.id === currentUsedCategory ? 'active' : ''}" data-id="${cat.id}" onclick="setFilter('${escapeJS(cat.id)}')">${escapeHTML(cat.name)}</button>`).join(''); 
@@ -2433,7 +2445,9 @@
             if (type === 'part') { 
                 nameLabel.innerText = "装备名称"; 
                 configGroup.style.display = 'none'; 
-                catSelect.innerHTML = categories.filter(c => c.id !== 'all').map(cat => `<option value="${cat.id}">${escapeHTML(cat.name)}</option>`).join(''); 
+                const partCats = getPartCategories();
+                catSelect.innerHTML = partCats.filter(c => c.id !== 'all').map(cat => `<option value="${cat.id}">${escapeHTML(cat.name)}</option>`).join(''); 
+                catSelect.innerHTML += `<option value="custom">➕ 手动添加新分类...</option>`; 
             } else { 
                 nameLabel.innerText = "车型名称 (如: 小牛N1S)"; 
                 configGroup.style.display = 'block'; 
@@ -2471,15 +2485,15 @@
             const isUsedCar = document.getElementById('new-item-type').value === 'used_car'; 
             let category = document.getElementById('new-category').value; 
             
-            if (isUsedCar && category === 'custom') { 
-                const customVal = document.getElementById('custom-category-input').value.trim().replace(/[\s,]+/g, '_'); 
+            if (category === 'custom') { 
+                const customVal = document.getElementById('custom-category-input').value.trim(); 
                 if (!customVal) { 
-                    showToast('请输入新车型名称', 'warning'); 
+                    showToast('请输入新分类名称', 'warning'); 
                     btn.disabled = false; 
                     btn.innerText = originalText; 
                     return; 
                 } 
-                category = 'used_' + customVal; 
+                category = isUsedCar ? 'used_' + customVal.replace(/[\s,]+/g, '_') : customVal; 
             } 
             
             let nameRaw = document.getElementById('new-name').value.trim(); 
@@ -2640,7 +2654,15 @@
                 } 
             } else { 
                 document.getElementById('new-name').value = parsed.name; 
-                document.getElementById('new-category').value = product.category; 
+                const catSelect = document.getElementById('new-category'); 
+                const catExists = Array.from(catSelect.options).some(opt => opt.value === product.category); 
+                if (catExists) { 
+                    catSelect.value = product.category; 
+                } else { 
+                    catSelect.value = 'custom'; 
+                    document.getElementById('custom-category-input').style.display = 'block'; 
+                    document.getElementById('custom-category-input').value = product.category; 
+                }
             } 
             
             document.getElementById('new-price').value = product.price; 
