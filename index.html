@@ -4283,6 +4283,71 @@
                 openAmapNavi(); 
             }
         };
+        /* ========================================================= */
+        /* ============ 修复生成小票卡死/无限等待问题的补丁 ============ */
+        /* ========================================================= */
+        
+        window.generateReceiptImage = async function(orderText) {
+            // 设置一个 5 秒的超时保护，防止任何情况导致的卡死
+            const timeoutPromise = (ms) => new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms));
+
+            try {
+                // 1. 带超时保护和错误捕获的库加载 (换用国内极速节点)
+                if (!window.html2canvas) {
+                    const loadScript = new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdn.staticfile.net/html2canvas/1.4.1/html2canvas.min.js';
+                        script.onload = resolve;
+                        script.onerror = () => reject(new Error('CDN Load Error'));
+                        document.head.appendChild(script);
+                    });
+                    await Promise.race([loadScript, timeoutPromise(5000)]);
+                }
+
+                let cleanText = orderText.replace(/🛒【壹工坊摩配 · 预定凭证】\n━━━━━━━━━━━━━━\n/, '');
+                cleanText = escapeHTML(cleanText); 
+                cleanText = cleanText.replace(/━━━━━━━━━━━━━━/g, '</div><div style="border-top: 1.5px dashed #ccc; margin: 16px 0;"></div><div style="font-size: 14px; line-height: 1.8; color: #111;">');
+                cleanText = cleanText.replace(/(💰 总计金额[：:])(¥[0-9.]+)/, '$1<span style="font-size: 22px; font-weight: 900; color: #e50000; letter-spacing: -0.5px;">$2</span>');
+                cleanText = cleanText.replace(/💬 老板你好，以上是我选好的商品，请确认！/, ''); 
+
+                const container = document.createElement('div');
+                container.id = 'temp-receipt-container';
+                
+                // 【修复核心】：不能把元素扔到 -9999px 的屏幕外，苹果手机会为了省电拒绝渲染导致死循环。
+                // 改为固定在当前屏幕的左上角，但设置为几乎透明 (opacity: 0.001) 且不可点击。
+                container.style.cssText = 'position: fixed; top: 0px; left: 0px; width: 340px; background: #ffffff; padding: 30px 24px; box-sizing: border-box; color: #111; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; border-top: 8px solid #FF5B5C; opacity: 0.001; pointer-events: none; z-index: -100;';
+                
+                container.innerHTML = `
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <div style="font-size: 24px; font-weight: 900; letter-spacing: 2px; color: #000;">壹工坊摩配</div>
+                        <div style="font-size: 12px; color: #666; margin-top: 6px; letter-spacing: 2px;">电 子 预 定 小 票</div>
+                    </div>
+                    <div style="font-size: 14px; line-height: 1.8; white-space: pre-wrap; word-break: break-all; color: #111;">${cleanText}</div>
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1.5px dashed #ccc; text-align: center;">
+                        <div style="font-size: 15px; font-weight: 800; color: #000; margin-bottom: 6px;">感谢您的信任与支持</div>
+                        <div style="font-size: 12px; color: #888;">长按保存此小票，发送给老板核对</div>
+                    </div>
+                `;
+
+                document.body.appendChild(container);
+                
+                // 2. 带 5 秒超时保护的绘图过程
+                const renderCanvas = html2canvas(container, { scale: 3, backgroundColor: '#ffffff', logging: false, useCORS: true });
+                const canvas = await Promise.race([renderCanvas, timeoutPromise(5000)]);
+                
+                document.body.removeChild(container);
+                return canvas.toDataURL('image/jpeg', 0.9);
+
+            } catch (e) {
+                console.warn('小票生成被跳过或失败，已降级处理:', e);
+                // 如果失败了，确保把留在屏幕上隐身的垃圾 DOM 删掉
+                const leftovers = document.getElementById('temp-receipt-container');
+                if (leftovers) document.body.removeChild(leftovers);
+                
+                // 返回 null，系统会自动判定生成失败，瞬间弹回以前正常的文字版窗口，绝不卡死
+                return null; 
+            }
+        };
     </script>
 </body>
 </html>
