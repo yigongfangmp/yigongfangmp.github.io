@@ -4096,6 +4096,99 @@ function getUsedCarCategories() {
                 document.getElementById('new-category').value = customCatObj.id;
             }
         };
+        /* ========================================================= */
+        /* ============ 售罄/已售商品自动沉底排序补丁 ============ */
+        /* ========================================================= */
+
+        // 覆盖原始的商品渲染逻辑，加入全新的多级排序权重
+        window.renderProducts = function() {
+            const grid = document.getElementById('products-grid'); 
+            
+            // 过滤掉非商品的数据节点
+            const allValidProducts = products.filter(p => { 
+                return p.category !== '__shop_gallery__' && 
+                       p.category !== '__qr_code__' && 
+                       p.category !== '__announcement__' && 
+                       p.category !== '__pay_qr_code__'; 
+            });
+            
+            // 【核心修改点：多重排序权重】
+            const sortedProducts = [...allValidProducts].sort((a, b) => { 
+                const aOutOfStock = a.in_stock === false;
+                const bOutOfStock = b.in_stock === false;
+                
+                // 1. 优先判断库存：缺货(售罄/已售)的商品强行排到后面
+                if (aOutOfStock && !bOutOfStock) return 1;
+                if (!aOutOfStock && bOutOfStock) return -1;
+                
+                // 2. 库存状态相同时，判断是否被老板“优先置顶”
+                const aParsed = decodeProductName(a.name); 
+                const bParsed = decodeProductName(b.name); 
+                if (aParsed.isPinned && !bParsed.isPinned) return -1; 
+                if (!aParsed.isPinned && bParsed.isPinned) return 1; 
+                
+                // 3. 都没有置顶，则按数据库默认顺序排序
+                return 0; 
+            });
+
+            if (sortedProducts.length === 0) { 
+                grid.innerHTML = ''; 
+                const emptyMsg = document.getElementById('empty-state-msg'); 
+                emptyMsg.innerText = currentZone === 'parts' ? "这页暂无待售商品，待老板后台上新~" : "这页暂无商品，待老板后台上新~"; 
+                emptyMsg.style.display = 'block'; 
+                return; 
+            }
+            
+            grid.innerHTML = sortedProducts.map(p => { 
+                const parsed = decodeProductName(p.name);
+                const isUsedCar = p.category && p.category.startsWith('used_'); 
+                let iconSvg = isUsedCar ? categoryIcons.used_car : (categoryIcons[p.category] || categoryIcons.default); 
+                const isOutOfStock = p.in_stock === false; 
+                const urls = p.image_url ? p.image_url.split(',').filter(Boolean) : []; 
+                const coverUrl = urls[0] ? escapeHTML(urls[0]) : ''; 
+                const safeJsId = escapeJS(String(p.id)); 
+                
+                // 生成图片结构
+                const imageHtml = coverUrl ? `<img src="${coverUrl}" alt="product" loading="lazy" onerror="handleImageError(this, '${escapeJS(p.category || '')}')">` : `<svg width="100%" height="100%" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" style="padding: 20%; color: var(--text-secondary); opacity: 0.5;">${iconSvg}</svg>`; 
+                
+                // 生成配置描述
+                const displayConfig = parsed.config ? `<div class="car-config-desc">${escapeHTML(parsed.config)}</div>` : ''; 
+                
+                // 生成按钮（加入清单/极速预定）
+                const actionHtml = isUsedCar ? `<button class="details-btn" onclick="openCarDetails('${safeJsId}')">查看详情</button>` : `<button class="add-btn" onclick="addToCart('${safeJsId}')" ${isOutOfStock ? 'disabled' : ''}><svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="3" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>`; 
+                
+                // 生成营销角标
+                const badgeHtml = parsed.badge ? `<div class="marketing-badge ${parsed.badge}">${BADGE_MAP[parsed.badge] || ''}</div>` : '';
+                let urgencyHtml = '';
+                if (parsed.badge === 'hot' || parsed.badge === 'discount') {
+                    urgencyHtml = `<div style="font-size: 11px; color: var(--accent-color); margin-top: 6px; display: flex; align-items: center; gap: 4px;"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>近期多人咨询，建议先锁单</div>`;
+                }
+
+                // 老板视角的库存提示
+                const bossStockHtml = isAdmin ? `<div style="font-size: 11px; color: ${parsed.stock > 0 ? '#007AFF' : '#FF3B30'}; background: ${parsed.stock > 0 ? 'rgba(0,122,255,0.1)' : 'rgba(255,59,48,0.1)'}; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px; font-weight: 600;">老板可见 · 库存: ${parsed.stock}</div>` : '';
+
+                return `
+                <div class="card ${isOutOfStock ? 'out-of-stock' : ''}" data-category="${escapeHTML(p.category || '')}" data-name="${escapeHTML(parsed.name.toLowerCase())}" style="${isOutOfStock ? 'opacity: 0.6;' : ''} display: none;">
+                    ${badgeHtml}
+                    <div class="card-img" ${isUsedCar ? `onclick="openCarDetails('${safeJsId}')" style="cursor:pointer;"` : ''}>
+                    <div class="stock-badge ${!isOutOfStock ? 'in-stock' : ''}">${isUsedCar ? (isOutOfStock ? '已售' : '未售') : (isOutOfStock ? '已售罄' : '现货秒装')}</div>
+                    ${imageHtml}
+                </div>
+                    <div class="card-body">
+                        <div class="card-title" title="${escapeHTML(parsed.name)}">${escapeHTML(parsed.name)}${displayConfig}${bossStockHtml}${urgencyHtml}</div>
+                        <div class="card-bottom">
+                            <div class="price-wrap"><span class="price-symbol">¥</span><span class="price">${safePrice(p.price).replace(/\.00$/, '')}</span></div>
+                            <div class="action-group">
+                                ${isAdmin ? `<button class="edit-btn" onclick="openEditAdmin('${safeJsId}')"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>` : ''}
+                                ${actionHtml}
+                            </div>
+                        </div>
+                    </div>
+                </div>`
+            }).join('');
+            
+            applyDOMFilter();
+        };
     </script>
 </body>
 </html>
