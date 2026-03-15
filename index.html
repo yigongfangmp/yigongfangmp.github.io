@@ -1977,7 +1977,7 @@
             showToast('导出成功', 'success');
         }
 
-        function getUsedCarCategories() { 
+function getUsedCarCategories() { 
             const defaults = [{id: 'used_niu', name: '小牛'}, {id: 'used_ninebot', name: '九号'}]; 
             const defaultIds = ['used_niu', 'used_ninebot']; 
             const uniqueCats = new Map(); 
@@ -1990,22 +1990,20 @@
             return [...defaults, ...Array.from(uniqueCats).map(([id, name]) => ({id, name}))]; 
         }
 
-function getPartCategories() {
-            const defaultIds = categories.map(c => c.id);
-            const uniqueCats = new Map();
-            products.forEach(p => {
-                if (p.category && !p.category.startsWith('__') && !p.category.startsWith('used_') && !defaultIds.includes(p.category)) {
-                    uniqueCats.set(p.category, p.category);
-                }
-            });
-            return [...categories, ...Array.from(uniqueCats).map(([id, name]) => ({id, name}))];
-        }
-
-function initFiltersDOM() { 
+        function initFiltersDOM() { 
             const filterBar = document.getElementById('filter-bar'); 
             if (currentZone === 'parts') { 
-                const allPartsCats = [...categories, ...(window.customCategories || [])];
-                let html = allPartsCats.map(cat => `<button class="filter-btn ${cat.id === currentCategory ? 'active' : ''}" data-id="${cat.id}" onclick="setFilter('${escapeJS(cat.id)}')">${escapeHTML(cat.name)}</button>`).join(''); 
+                // 过滤掉被老板删掉的默认分类
+                const visibleDefaultCats = categories.filter(c => !(window.deletedCategoryIds || []).includes(c.id));
+                const allPartsCats = [...visibleDefaultCats, ...(window.customCategories || [])];
+                
+                let html = allPartsCats.map(cat => {
+                    const activeCls = cat.id === currentCategory ? 'active' : '';
+                    // 允许删除除了“全系列(all)”以外的所有按钮
+                    const canDelete = isAdmin && cat.id !== 'all';
+                    const delBtn = canDelete ? `<span style="margin-left: 6px; font-size: 16px; line-height: 1; opacity: 0.5; cursor: pointer; padding: 0 2px;" onclick="event.stopPropagation(); showDeleteCategoryModal('${escapeJS(cat.id)}')">×</span>` : '';
+                    return `<button class="filter-btn ${activeCls}" data-id="${cat.id}" onclick="setFilter('${escapeJS(cat.id)}')">${escapeHTML(cat.name)}${delBtn}</button>`;
+                }).join(''); 
                 
                 if (isAdmin) {
                     html += `<button class="filter-btn" style="border: 1px dashed var(--text-secondary); color: var(--text-secondary); padding: 6px 12px; background: transparent;" onclick="addNewCategory()">➕ 添加分类</button>`;
@@ -2017,7 +2015,7 @@ function initFiltersDOM() {
             } 
             setTimeout(() => { 
                 const activeBtn = document.querySelector('.filter-btn.active'); 
-                if (activeBtn && window.innerWidth <= 768) activeBtn.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' }); 
+                if (activeBtn && window.innerWidth <= 768) activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); 
             }, 100); 
         }
 
@@ -2025,16 +2023,20 @@ function initFiltersDOM() {
             if (!isAdmin) return;
             const newCatName = await showModal({ 
                 title: '添加新配件分类', 
-                desc: '请输入新的筛选按钮名称（如：尾箱、风挡）<br><span style="font-size:12px;color:var(--text-secondary);display:block;margin-top:8px;">提示：若需删除自定义分类，只需在选中它时，再次点击该分类按钮即可。</span>', 
+                desc: '请输入新的分类名称（如：尾箱、风挡）', 
                 type: 'prompt', 
                 confirmText: '确认添加' 
             });
+            
             if (newCatName && newCatName !== 'close') {
                 const name = newCatName.trim();
                 if (!name) return showToast('分类名称不能为空', 'warning');
-                const allPartsCats = [...categories, ...(window.customCategories || [])];
+                if (name.length > 8) return showToast('分类名称建议不要超过8个字', 'warning');
+                
+                const visibleDefaultCats = categories.filter(c => !(window.deletedCategoryIds || []).includes(c.id));
+                const allPartsCats = [...visibleDefaultCats, ...(window.customCategories || [])];
                 if (allPartsCats.some(c => c.name === name)) {
-                    return showToast('该分类已存在', 'warning');
+                    return showToast('该分类已存在，请换个名字', 'warning');
                 }
                 
                 showToast('正在创建...', 'info');
@@ -2050,30 +2052,51 @@ function initFiltersDOM() {
                     showToast('分类添加成功', 'success'); 
                     try { localStorage.removeItem('ygf_products_cache'); } catch(e) {} 
                     await fetchProducts(); 
+                    
+                    // 添加完毕后自动平滑滚动到最右侧，展现新增的按钮
                     setTimeout(() => {
                         const filterBar = document.getElementById('filter-bar');
-                        if (filterBar) filterBar.scrollLeft = filterBar.scrollWidth;
+                        if (filterBar) filterBar.scrollTo({ left: filterBar.scrollWidth, behavior: 'smooth' });
                     }, 500);
                 } catch(e) { showToast('添加失败', 'error'); }
             }
         }
 
         async function showDeleteCategoryModal(catId) {
-            const cat = (window.customCategories || []).find(c => c.id === catId);
+            let cat = (window.customCategories || []).find(c => c.id === catId);
+            let isDefault = false;
+            if (!cat) {
+                cat = categories.find(c => c.id === catId);
+                isDefault = true;
+            }
             if (!cat) return;
+
             const confirmed = await showModal({
                 title: '删除分类',
-                desc: `确定要删除分类“${escapeHTML(cat.name)}”吗？<br><span style="font-size:12px;color:var(--accent-color);display:block;margin-top:6px;">注意：该分类下的商品不会被删除，但将失去此分类标签。</span>`,
-                confirmText: '删除',
+                desc: `确定要删除分类 <b style="color:var(--text-primary);">“${escapeHTML(cat.name)}”</b> 吗？<br><span style="font-size:12px;color:var(--accent-color);display:block;margin-top:6px;">注意：删除分类不会下架该分类下的商品，仅隐藏分类按钮。</span>`,
+                confirmText: '确认删除',
                 cancelText: '取消'
             });
+            
             if (confirmed === true) {
                 showToast('正在删除...', 'info');
                 try {
-                    await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${cat.dbId}`, { 
-                        method: 'DELETE', 
-                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
-                    });
+                    if (isDefault) {
+                        // 如果删的是默认写死的分类，向云端打个标记让它永久不显示
+                        const dbPayload = { name: cat.id, category: '__deleted_category__', price: 0, in_stock: false, image_url: '' };
+                        await fetch(`${SUPABASE_URL}/rest/v1/products`, {
+                            method: 'POST',
+                            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify(dbPayload)
+                        });
+                    } else {
+                        // 如果删的是老板手加的，直接删掉
+                        await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${cat.dbId}`, { 
+                            method: 'DELETE', 
+                            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
+                        });
+                    }
+                    
                     showToast('分类已删除', 'success');
                     if (currentCategory === catId) {
                         currentCategory = 'all';
@@ -2097,12 +2120,6 @@ function initFiltersDOM() {
 
         function setFilter(id) { 
             triggerHaptic(); 
-            // 如果老板模式下，点的是已经处于选中状态的自定义分类，则触发删除提示
-            if (isAdmin && currentZone === 'parts' && id === currentCategory && id.startsWith('custom_')) {
-                showDeleteCategoryModal(id);
-                return;
-            }
-
             if (currentZone === 'parts') { 
                 currentCategory = id; 
                 try { sessionStorage.setItem('yigongfang_category', id); } catch(e){ console.warn(e); } 
@@ -2395,16 +2412,21 @@ function initFiltersDOM() {
             announcementData = allData.find(p => p.category === '__announcement__');
             shopImages = allData.filter(p => p.category === '__shop_gallery__'); 
             
-            // 解析所有老板单独添加的自定义分类
+            // 1. 解析老板单独添加的自定义分类
             const rawCustomCats = allData.filter(p => p.category === '__category__');
             window.customCategories = rawCustomCats.map(p => ({ id: `custom_${p.id}`, name: p.name, dbId: p.id }));
+
+            // 2. 解析老板隐藏掉的默认分类
+            const rawDeletedCats = allData.filter(p => p.category === '__deleted_category__');
+            window.deletedCategoryIds = rawDeletedCats.map(p => p.name);
 
             products = allData.filter(p => 
                 p.category !== '__shop_gallery__' && 
                 p.category !== '__qr_code__' && 
                 p.category !== '__announcement__' && 
                 p.category !== '__pay_qr_code__' &&
-                p.category !== '__category__'
+                p.category !== '__category__' &&
+                p.category !== '__deleted_category__'
             ); 
         }
 
@@ -2531,7 +2553,9 @@ function initFiltersDOM() {
             if (type === 'part') { 
                 nameLabel.innerText = "装备名称"; 
                 configGroup.style.display = 'none'; 
-                const allPartsCats = [...categories, ...(window.customCategories || [])];
+                // 只显示老板没有隐藏掉的真实分类
+                const visibleDefaultCats = categories.filter(c => !(window.deletedCategoryIds || []).includes(c.id));
+                const allPartsCats = [...visibleDefaultCats, ...(window.customCategories || [])];
                 catSelect.innerHTML = allPartsCats.filter(c => c.id !== 'all').map(cat => `<option value="${cat.id}">${escapeHTML(cat.name)}</option>`).join(''); 
             } else { 
                 nameLabel.innerText = "车型名称 (如: 小牛N1S)"; 
@@ -2744,7 +2768,11 @@ function initFiltersDOM() {
                 if (catExists) { 
                     catSelect.value = product.category; 
                 } else { 
-                    catSelect.innerHTML += `<option value="${product.category}">${product.category} (已删除的分类)</option>`;
+                    // 智能处理已经隐藏的历史分类，防止老板修改时找不到下拉框
+                    let catName = product.category;
+                    const oldCat = categories.find(c => c.id === product.category);
+                    if(oldCat) catName = oldCat.name;
+                    catSelect.innerHTML += `<option value="${product.category}">${escapeHTML(catName)} (已隐藏的分类)</option>`;
                     catSelect.value = product.category; 
                 }
             } 
