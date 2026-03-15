@@ -3593,6 +3593,336 @@
                 if (window.updateUserOrdersBadge) updateUserOrdersBadge(); // 更新红点
             }
         };
+        /* ========================================================= */
+        /* ============ 优化订单凭证排版与解析兼容补丁 ============ */
+        /* ========================================================= */
+
+        // 1. 覆盖重写：生成带有 Emoji 和分割线的美观排版订单文本
+        window.processOrderSubmission = async function(itemsArray, contactInfo, remarkInfo, btnId, isFromCart) {
+            try { 
+                const lastSubmit = localStorage.getItem('yigongfang_last_submit_time'); 
+                if (lastSubmit && Date.now() - parseInt(lastSubmit, 10) < 5000) { 
+                    return showToast('提交得太快啦，请稍等再试', 'warning'); 
+                } 
+            } catch(e) { console.warn(e); }
+
+            isProcessingOrder = true;
+            const btn = btnId ? document.getElementById(btnId) : null;
+            let origBtnText = '';
+            if(btn) {
+                origBtnText = btn.innerText;
+                btn.innerText = '正在生成安全凭证...';
+                btn.disabled = true;
+            } else {
+                showToast('正在生成预定凭证...', 'info');
+            }
+
+            try {
+                const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, ''); 
+                const randomCode = Math.floor(1000 + Math.random() * 9000); 
+                const orderNo = `YGF-${dateStr}-${randomCode}`;
+                
+                // 【排版优化点】：使用 Emoji 和分割线让文本更像电子小票
+                let orderText = `🛒【壹工坊摩配 · 预定凭证】\n━━━━━━━━━━━━━━\n📦 订单编号：${orderNo}\n📞 联系方式：${contactInfo || '未预留'}\n`;
+                if (remarkInfo) {
+                    orderText += `📝 客户备注：${remarkInfo}\n`;
+                }
+                orderText += `━━━━━━━━━━━━━━\n✨ 选购明细：\n`; 
+                
+                let totalCents = 0; 
+                
+                itemsArray.forEach((item, index) => { 
+                    const itemTotalCents = Math.round(Number(item.price) * 100) * item.qty; 
+                    const itemTotalStr = (itemTotalCents / 100).toFixed(2); 
+                    const parsed = decodeProductName(item.name); 
+                    // 优化每一项的缩进展示
+                    orderText += `${index + 1}. ${parsed.name}\n   ▸ 数量: ${item.qty}件  |  小计: ¥${itemTotalStr}\n`; 
+                    totalCents += itemTotalCents; 
+                });
+                
+                const totalStr = (totalCents / 100).toFixed(2); 
+                orderText += `━━━━━━━━━━━━━━\n💰 总计金额：¥${totalStr}\n\n💬 老板你好，以上是我选好的商品，请确认！`; 
+                
+                window.currentOrderText = orderText;
+
+                try { 
+                    if (contactInfo) localStorage.setItem('yigongfang_last_contact', contactInfo); 
+                    localStorage.setItem('yigongfang_last_submit_time', Date.now().toString()); 
+                } catch(e) { console.warn(e); }
+
+                // 复制到剪贴板
+                try { 
+                    if (navigator.clipboard && window.isSecureContext) { 
+                        navigator.clipboard.writeText(orderText).catch(e => console.warn(e)); 
+                        await new Promise(res => setTimeout(res, 50)); 
+                    } else { 
+                        const t = document.createElement("textarea"); 
+                        t.value = orderText; 
+                        t.style.position = "fixed"; 
+                        t.style.left = "-9999px"; 
+                        t.style.top = "-9999px"; 
+                        t.setAttribute("readonly", "readonly"); 
+                        document.body.appendChild(t); 
+                        t.select(); 
+                        t.setSelectionRange(0, 99999); 
+                        document.execCommand('copy'); 
+                        document.body.removeChild(t); 
+                    } 
+                } catch (err) {}
+
+                // 同步云端
+                try { 
+                    const encodedContact = encodeOrderContact(contactInfo || '未留联系方式', 'new');
+                    const dbPayload = { contact: encodedContact, content: orderText }; 
+                    await fetch(`${SUPABASE_URL}/rest/v1/orders`, { 
+                        method: 'POST', 
+                        headers: { 
+                            'apikey': SUPABASE_ANON_KEY, 
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 
+                            'Content-Type': 'application/json' 
+                        }, 
+                        body: JSON.stringify(dbPayload) 
+                    }); 
+                } catch(e) { console.warn('DB API Failed', e); }
+
+                // 微信推送通知老板
+                try {
+                    const notifyText = `壹工坊收到新意向单！\n订单总计: ¥${totalStr}\n客户联系: ${contactInfo}\n\n请尽快去网页后台查看客户的详细需求清单。`;
+                    const bossUid = 'UID_WSxlMsHcijIn2p4Sgbg80B0L0NwO';
+                    const wxToken = 'AT_Mg7wgtia4se3Ft9bCK78kLVpTm9sSDGU';
+
+                    fetch('https://wxpusher.zjiecode.com/api/send/message', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            appToken: wxToken,
+                            content: notifyText,
+                            summary: '壹工坊新订单提醒',
+                            contentType: 1, 
+                            uids: [bossUid]
+                        })
+                    }).catch(e => {
+                        const fallbackUrl = `https://wxpusher.zjiecode.com/api/send/message/?appToken=${wxToken}&uid=${bossUid}&content=${encodeURIComponent(notifyText)}`;
+                        new Image().src = fallbackUrl;
+                    });
+                } catch(e) { console.warn('Push Error', e); }
+
+                // 扣减库存
+                try {
+                    let stockChanged = false;
+                    for (const item of itemsArray) {
+                        const pRes = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${item.id}&select=name,in_stock`, {
+                            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                        });
+                        if (pRes.ok) {
+                            const pData = await pRes.json();
+                            if (pData && pData.length > 0) {
+                                const currentParsed = decodeProductName(pData[0].name);
+                                let newStock = currentParsed.stock - item.qty;
+                                if (newStock < 0) newStock = 0;
+                                const newInStock = pData[0].in_stock && newStock > 0; 
+                                
+                                const newEncodedName = encodeProductName(currentParsed.name, currentParsed.config, currentParsed.badge, currentParsed.isPinned, newStock);
+                                
+                                await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${item.id}`, {
+                                    method: 'PATCH',
+                                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+                                    body: JSON.stringify({ name: newEncodedName, in_stock: newInStock })
+                                });
+                                stockChanged = true;
+                            }
+                        }
+                    }
+                    if (stockChanged) {
+                        try { localStorage.removeItem('ygf_products_cache'); } catch(e) {}
+                        fetchProducts(); 
+                    }
+                } catch(e) { console.warn('库存扣除异常', e); }
+
+                if (isFromCart) {
+                    cart = []; 
+                    updateCart(); 
+                    document.getElementById('buyer-contact').value = '';
+                    if(document.getElementById('buyer-remark')) document.getElementById('buyer-remark').value = '';
+                }
+                
+                const qrImgSrc = qrCodeUrl ? escapeHTML(qrCodeUrl) : 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=weixin://contacts/profile/wxid_w5lxkhqtn06w22';
+                const payQrImgSrc = payQrCodeUrl ? escapeHTML(payQrCodeUrl) : 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PayCodeEmpty';
+                const depositAmount = totalCents > 100000 ? 100 : (totalCents > 0 ? 50 : 0);
+                const payRemarkString = remarkInfo ? `尾号${orderNo.slice(-4)} ${remarkInfo}` : `订单尾号${orderNo.slice(-4)}`;
+
+                const finalAction = await showModal({
+                    title: '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; margin-top: 10px; padding-bottom: 10px;"><div style="width: 52px; height: 52px; background: #07C160; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(7,193,96,0.3);"><svg viewBox="0 0 24 24" width="32" height="32" stroke="#FFF" stroke-width="3" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.5px;">订单提交成功</div></div>',
+                    desc: `
+                    <div style="text-align: left; font-size: 14px; line-height: 1.6; padding: 0 4px;">
+                        
+                        <div style="text-align: center; margin-bottom: 24px;">
+                            <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">需要付款 / 总计</div>
+                            <div style="font-size: 36px; font-weight: 800; color: var(--text-primary); font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif; line-height: 1.1;">
+                                <span style="font-size: 20px; font-weight: 600; margin-right: 2px;">¥</span>${totalStr}
+                            </div>
+                        </div>
+
+                        <div style="background: var(--card-color); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                                <span style="color: var(--text-secondary); font-size: 14px;">提货单号</span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-weight: 600; font-family: monospace; font-size: 15px; color: var(--text-primary);">${orderNo}</span>
+                                    <span onclick="copyAnyText('${orderNo}')" style="color: #333; font-size: 12px; background: var(--bg-color); padding: 3px 10px; border-radius: 12px; border: 1px solid var(--divider); cursor: pointer; font-weight: 500;">复制</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                                <span style="color: var(--text-secondary); font-size: 14px;">提货方式</span>
+                                <span style="font-weight: 600; font-size: 14px; color: var(--text-primary);">可凭单号到店自提</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: var(--text-secondary); font-size: 14px;">订单状态</span>
+                                <span style="font-weight: 600; font-size: 14px; color: #07C160;">老板已收到订单提醒</span>
+                            </div>
+                        </div>
+
+                        <div style="background: var(--card-color); border-radius: 12px; padding: 16px; margin-bottom: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <div style="font-size: 15px; font-weight: 800; color: var(--text-primary);">长按二维码操作</div>
+                                <div style="font-size: 12px; color: #FF5000; background: rgba(255,80,0,0.08); padding: 4px 8px; border-radius: 6px; font-weight: 600;">建议付 ¥${depositAmount} 定金锁单</div>
+                            </div>
+                            
+                            <div style="display: flex; gap: 12px;">
+                                <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                                    <div style="width: 100%; aspect-ratio: 1; max-width: 130px; background: var(--bg-color); border-radius: 8px; padding: 6px; margin-bottom: 10px; border: 1px solid var(--divider);">
+                                        <img src="${qrImgSrc}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 4px; -webkit-touch-callout: default;">
+                                    </div>
+                                    <div style="font-size: 14px; font-weight: 800; color: var(--text-primary);">① 联系老板</div>
+                                </div>
+                                <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                                    <div style="width: 100%; aspect-ratio: 1; max-width: 130px; background: var(--bg-color); border-radius: 8px; padding: 6px; margin-bottom: 10px; border: 1px solid var(--divider);">
+                                        <img src="${payQrImgSrc}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 4px; -webkit-touch-callout: default;">
+                                    </div>
+                                    <div style="font-size: 14px; font-weight: 800; color: var(--text-primary);">② 扫码付款</div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 16px; padding: 12px; background: var(--bg-color); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                <div style="overflow: hidden; padding-right: 12px;">
+                                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">付款备注 (方便极速对账)</div>
+                                    <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(payRemarkString)}</div>
+                                </div>
+                                <button onclick="copyAnyText('${escapeJS(payRemarkString)}')" style="background: transparent; color: #FF5000; border: 1px solid #FF5000; padding: 4px 14px; border-radius: 14px; font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0;">复制</button>
+                            </div>
+                        </div>
+
+                        <button onclick="manualCopyOrder(); setTimeout(() => { window.location.href = 'weixin://'; }, 800);" style="background: linear-gradient(90deg, #FF9000, #FF5000); color: #FFF; border: none; padding: 14px 16px; border-radius: 100px; font-size: 16px; font-weight: 800; width: 100%; cursor: pointer; box-shadow: 0 6px 16px rgba(255, 80, 0, 0.25); display: flex; align-items: center; justify-content: center; gap: 6px; letter-spacing: 0.5px;">
+                            一键复制清单并前往微信
+                        </button>
+
+                    </div>`,
+                    confirmText: '完成', 
+                    cancelText: '导航去门店'
+                });
+                if (finalAction === false) { 
+                    openAmapNavi(); 
+                    if (isFromCart) { closeCart(); }
+                } else { 
+                    if (isFromCart) { closeCart(); }
+                }
+
+            } catch (err) {
+                showToast('系统遇到一点小问题，请稍后再试', 'error');
+            } finally {
+                isProcessingOrder = false; 
+                if(btn) {
+                    btn.innerText = origBtnText; 
+                    btn.disabled = false;
+                }
+                // 恢复通知红点更新
+                if (window.updateUserOrdersBadge) setTimeout(window.updateUserOrdersBadge, 1000);
+            }
+        }
+
+        // 2. 覆盖重写：历史订单弹窗解析逻辑以兼容新旧排版
+        window.reopenOrderModal = async function(encodedContent) {
+            const content = decodeURIComponent(encodedContent);
+            
+            // 兼容新老版本的正则解析 (支持 "：" 和 ":"，带有空格的情况)
+            const orderNoMatch = content.match(/订单编号[：:]\s*([A-Z0-9-]+)/);
+            const orderNo = orderNoMatch ? orderNoMatch[1] : '未知单号';
+
+            const totalMatch = content.match(/总计金额[：:]\s*[¥￥]?([0-9.]+)/);
+            const totalStr = totalMatch ? totalMatch[1] : '0.00';
+            const totalCents = Math.round(parseFloat(totalStr) * 100);
+
+            const remarkMatch = content.match(/客户备注[：:]\s*(.*?)\n/);
+            const remarkInfo = remarkMatch ? remarkMatch[1].trim() : '';
+
+            const qrImgSrc = qrCodeUrl ? escapeHTML(qrCodeUrl) : 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=weixin://contacts/profile/wxid_w5lxkhqtn06w22';
+            const payQrImgSrc = payQrCodeUrl ? escapeHTML(payQrCodeUrl) : 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PayCodeEmpty';
+            const depositAmount = totalCents > 100000 ? 100 : (totalCents > 0 ? 50 : 0);
+            const payRemarkString = remarkInfo ? `尾号${orderNo.slice(-4)} ${remarkInfo}` : `订单尾号${orderNo.slice(-4)}`;
+
+            window.currentOrderText = content; 
+
+            const finalAction = await showModal({
+                title: '<div style="font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.5px;">订单凭证与联系方式</div>',
+                desc: `
+                <div style="text-align: left; font-size: 14px; line-height: 1.6; padding: 0 4px;">
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">需要付款 / 总计</div>
+                        <div style="font-size: 36px; font-weight: 800; color: var(--text-primary); font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif; line-height: 1.1;">
+                            <span style="font-size: 20px; font-weight: 600; margin-right: 2px;">¥</span>${totalStr}
+                        </div>
+                    </div>
+
+                    <div style="background: var(--card-color); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                            <span style="color: var(--text-secondary); font-size: 14px;">提货单号</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-weight: 600; font-family: monospace; font-size: 15px; color: var(--text-primary);">${orderNo}</span>
+                                <span onclick="copyAnyText('${orderNo}')" style="color: #333; font-size: 12px; background: var(--bg-color); padding: 3px 10px; border-radius: 12px; border: 1px solid var(--divider); cursor: pointer; font-weight: 500;">复制</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: var(--card-color); border-radius: 12px; padding: 16px; margin-bottom: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <div style="font-size: 15px; font-weight: 800; color: var(--text-primary);">长按二维码操作</div>
+                            <div style="font-size: 12px; color: #FF5000; background: rgba(255,80,0,0.08); padding: 4px 8px; border-radius: 6px; font-weight: 600;">建议付 ¥${depositAmount} 定金锁单</div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 12px;">
+                            <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 100%; aspect-ratio: 1; max-width: 130px; background: var(--bg-color); border-radius: 8px; padding: 6px; margin-bottom: 10px; border: 1px solid var(--divider);">
+                                    <img src="${qrImgSrc}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 4px; -webkit-touch-callout: default;">
+                                </div>
+                                <div style="font-size: 14px; font-weight: 800; color: var(--text-primary);">① 联系老板</div>
+                            </div>
+                            <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 100%; aspect-ratio: 1; max-width: 130px; background: var(--bg-color); border-radius: 8px; padding: 6px; margin-bottom: 10px; border: 1px solid var(--divider);">
+                                    <img src="${payQrImgSrc}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 4px; -webkit-touch-callout: default;">
+                                </div>
+                                <div style="font-size: 14px; font-weight: 800; color: var(--text-primary);">② 扫码付款</div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 16px; padding: 12px; background: var(--bg-color); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="overflow: hidden; padding-right: 12px;">
+                                <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">付款备注 (方便极速对账)</div>
+                                <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(payRemarkString)}</div>
+                            </div>
+                            <button onclick="copyAnyText('${escapeJS(payRemarkString)}')" style="background: transparent; color: #FF5000; border: 1px solid #FF5000; padding: 4px 14px; border-radius: 14px; font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0;">复制</button>
+                        </div>
+                    </div>
+
+                    <button onclick="manualCopyOrder(); setTimeout(() => { window.location.href = 'weixin://'; }, 800);" style="background: linear-gradient(90deg, #FF9000, #FF5000); color: #FFF; border: none; padding: 14px 16px; border-radius: 100px; font-size: 16px; font-weight: 800; width: 100%; cursor: pointer; box-shadow: 0 6px 16px rgba(255, 80, 0, 0.25); display: flex; align-items: center; justify-content: center; gap: 6px; letter-spacing: 0.5px;">
+                        一键复制清单并前往微信
+                    </button>
+                </div>`,
+                confirmText: '完成', 
+                cancelText: '导航去门店'
+            });
+            if (finalAction === false) { 
+                openAmapNavi(); 
+            }
+        };
     </script>
 </body>
 </html>
