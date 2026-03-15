@@ -3200,6 +3200,293 @@ function getUsedCarCategories() {
                 console.error("Initialization Failed:", err);
             }
         });
+        /* ========================================================= */
+        /* ============ 老板模式弹窗键盘修复补丁 (追加在此处即可) ============ */
+        /* ========================================================= */
+
+        // 1. 升级核心弹窗函数，支持动态切换【文本】或【密码】输入
+        function showModal({ title, desc = '', type = 'confirm', inputType = 'text', inputPlaceholder = '', confirmText = '确定', cancelText = '取消' }) {
+            return new Promise((resolve) => { 
+                if (globalModalResolve) { 
+                    const res = globalModalResolve;
+                    if (globalModalCleanup) globalModalCleanup();
+                    res('close');
+                } 
+                globalModalResolve = resolve; 
+                
+                const overlay = document.getElementById('custom-modal'); 
+                const titleEl = document.getElementById('modal-title'); 
+                const descEl = document.getElementById('modal-desc'); 
+                const inputEl = document.getElementById('modal-input'); 
+                const cancelBtn = document.getElementById('modal-cancel'); 
+                const confirmBtn = document.getElementById('modal-confirm'); 
+                
+                titleEl.innerHTML = title; 
+                
+                Array.from(descEl.childNodes).forEach(node => { 
+                    if (node !== inputEl && node.className !== 'custom-desc-wrap') node.remove(); 
+                }); 
+                
+                if (desc) { 
+                    let htmlWrapper = descEl.querySelector('.custom-desc-wrap'); 
+                    if(!htmlWrapper) { 
+                        htmlWrapper = document.createElement('div'); 
+                        htmlWrapper.className = 'custom-desc-wrap'; 
+                        descEl.insertBefore(htmlWrapper, inputEl); 
+                    } 
+                    htmlWrapper.innerHTML = desc; 
+                } 
+                
+                confirmBtn.innerText = confirmText; 
+                cancelBtn.innerText = cancelText; 
+                
+                let modalFocusTimeout = null;
+                
+                if (type === 'prompt') { 
+                    // 动态修复 HTML 中的 password 属性
+                    inputEl.type = inputType; 
+                    inputEl.placeholder = inputPlaceholder;
+                    
+                    inputEl.style.display = 'block'; 
+                    inputEl.value = ''; 
+                    modalFocusTimeout = setTimeout(() => inputEl.focus(), 300); 
+                } else { 
+                    inputEl.style.display = 'none'; 
+                } 
+                
+                overlay.classList.add('active'); 
+                toggleBodyScroll(); 
+                
+                globalModalCleanup = () => { 
+                    clearTimeout(modalFocusTimeout);
+                    overlay.classList.remove('active'); 
+                    inputEl.blur(); 
+                    toggleBodyScroll(); 
+                    cancelBtn.onclick = null; 
+                    confirmBtn.onclick = null; 
+                    globalModalResolve = null; 
+                    globalModalCleanup = null;
+                }; 
+                
+                cancelBtn.onclick = () => { globalModalCleanup(); resolve(false); }; 
+                confirmBtn.onclick = () => { globalModalCleanup(); resolve(type === 'prompt' ? inputEl.value : true); }; 
+            });
+        }
+
+        // 2. 覆盖：极速预定 (文本框)
+        async function quickCheckoutCar(id) {
+            if (isProcessingOrder) return;
+            const product = products.find(p => String(p.id) === String(id));
+            if (!product) return;
+            
+            const contactInfo = await showModal({
+                title: '极速预定',
+                desc: '请输入您的微信号或手机号，老板将极速跟进并为您预留锁单：',
+                type: 'prompt',
+                inputType: 'text',
+                inputPlaceholder: '请输入微信号或手机号',
+                confirmText: '生成预定凭证'
+            });
+
+            if (contactInfo && contactInfo !== 'close') {
+                if (contactInfo.trim().length < 5) {
+                    return showToast('联系方式太短，请输入真实的微信号或手机号', 'warning');
+                }
+                await processOrderSubmission([{...product, qty: 1}], contactInfo.trim(), '', null, false);
+            }
+        }
+
+        // 3. 覆盖：填写发货单号 (文本框)
+        async function changeOrderStatus(orderId, currentStatus, contactRaw) {
+            window.tempStatusResolveValue = null;
+            
+            const optionsHtml = Object.keys(ORDER_STATUS_MAP).map(key => 
+                `<div style="padding: 12px; border-bottom: 1px solid var(--divider); color: ${key===currentStatus ? 'var(--accent-color)' : 'var(--text-primary)'}; font-weight: ${key===currentStatus ? 'bold' : 'normal'}; cursor: pointer;" 
+                onclick="event.stopPropagation(); const box = document.getElementById('temp-scroll-box'); if(box) box.style.overflow='hidden'; window.tempStatusResolveValue='${key}'; closeCustomModal();">${ORDER_STATUS_MAP[key]}</div>`
+            ).join('');
+            
+            await showModal({ 
+                title: '修改追踪状态', 
+                desc: `<div id="temp-scroll-box" style="text-align:center; max-height: 200px; overflow-y:auto; overscroll-behavior: contain;">${optionsHtml}</div>`, 
+                type: 'confirm', 
+                confirmText: '暂不修改',
+                cancelText: '关闭窗口'
+            });
+            
+            const newStatus = window.tempStatusResolveValue;
+            
+            if (newStatus && newStatus !== currentStatus && typeof newStatus === 'string') {
+                
+                let trackingText = '';
+                if (newStatus === 'shipped') {
+                    const trackingInfo = await showModal({
+                        title: '🚚 填写发货信息 (可选)',
+                        desc: '输入快递公司和单号，顾客查单时能直接看到进度：<br><span style="font-size:11px;color:var(--text-secondary);">(不需要就留空，直接点确认发货)</span>',
+                        type: 'prompt',
+                        inputType: 'text',
+                        inputPlaceholder: '如: 顺丰 SF12345...',
+                        confirmText: '确认发货'
+                    });
+                    
+                    if (trackingInfo === false || trackingInfo === 'close') return; 
+                    
+                    if (trackingInfo.trim()) {
+                        trackingText = `\n\n━━━━━━━━━━━━━━\n📦【物流更新】\n时间：${formatDate(new Date().toISOString())}\n进度：已发货\n单号：${trackingInfo.trim()}\n━━━━━━━━━━━━━━`;
+                    }
+                }
+
+                showToast('更新中...', 'info');
+                try {
+                    const newContactField = encodeOrderContact(contactRaw, newStatus);
+                    let payload = { contact: newContactField };
+                    
+                    if (trackingText) {
+                        const targetOrder = globalActiveOrders.find(o => String(o.id) === String(orderId));
+                        if (targetOrder && targetOrder.content) {
+                            let baseContent = targetOrder.content.split('\n\n━━━━━━━━━━━━━━\n📦【物流更新】')[0];
+                            payload.content = baseContent + trackingText;
+                        }
+                    }
+
+                    const response = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`, { 
+                        method: 'PATCH', 
+                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, 
+                        body: JSON.stringify(payload) 
+                    });
+                    if (!response.ok) throw new Error();
+                    showToast('状态已更新', 'success');
+                    
+                    await openOrdersPanel(true);
+                    
+                    setTimeout(() => {
+                        const panelScroll = document.querySelector('#orders-panel .cart-content');
+                        if (panelScroll) {
+                            const currentScroll = panelScroll.scrollTop;
+                            panelScroll.style.display = 'none';
+                            panelScroll.offsetHeight;          
+                            panelScroll.style.display = 'block';
+                            panelScroll.scrollTop = currentScroll;
+                        }
+                    }, 20);
+
+                } catch(e) { showToast('更新失败', 'error'); }
+            }
+        }
+
+        // 4. 覆盖：添加新分类 (文本框)
+        async function addNewCategory() {
+            if (!isAdmin) return;
+            const newCatName = await showModal({ 
+                title: '添加新配件分类', 
+                desc: '请输入新的分类名称（如：尾箱、风挡）', 
+                type: 'prompt', 
+                inputType: 'text',
+                inputPlaceholder: '分类名称限制8个字以内',
+                confirmText: '确认添加' 
+            });
+            
+            if (newCatName && newCatName !== 'close') {
+                const name = newCatName.trim();
+                if (!name) return showToast('分类名称不能为空', 'warning');
+                if (name.length > 8) return showToast('分类名称建议不要超过8个字', 'warning');
+                
+                const visibleDefaultCats = categories.filter(c => !(window.deletedCategoryIds || []).includes(c.id));
+                const allPartsCats = [...visibleDefaultCats, ...(window.customCategories || [])];
+                if (allPartsCats.some(c => c.name === name)) {
+                    return showToast('该分类已存在，请换个名字', 'warning');
+                }
+                
+                showToast('正在创建...', 'info');
+                try {
+                    const dbPayload = { name: name, category: '__category__', price: 0, in_stock: true, image_url: '' }; 
+                    const response = await fetch(`${SUPABASE_URL}/rest/v1/products`, { 
+                        method: 'POST', 
+                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify(dbPayload) 
+                    }); 
+                    if (!response.ok) throw new Error('添加失败'); 
+                    
+                    showToast('分类添加成功', 'success'); 
+                    try { localStorage.removeItem('ygf_products_cache'); } catch(e) {} 
+                    await fetchProducts(); 
+                    
+                    setTimeout(() => {
+                        const filterBar = document.getElementById('filter-bar');
+                        if (filterBar) filterBar.scrollTo({ left: filterBar.scrollWidth, behavior: 'smooth' });
+                    }, 500);
+                } catch(e) { showToast('添加失败', 'error'); }
+            }
+        }
+
+        // 5. 覆盖：身份验证 (密码框)
+        async function checkSecret() { 
+            if (isAdmin) { 
+                const confirmLogout = await showModal({ title: '退出老板模式', desc: '确定要退出管理状态吗？', confirmText: '退出' }); 
+                if(confirmLogout === true) { 
+                    localStorage.removeItem('isShopAdmin'); 
+                    location.reload(); 
+                } 
+                return; 
+            } 
+            
+            tapCount++; 
+            clearTimeout(tapTimeout); 
+            tapTimeout = setTimeout(() => { tapCount = 0; }, 1000); 
+            
+            if (tapCount >= 5) { 
+                tapCount = 0; 
+                triggerHaptic(); 
+                const pwd = await showModal({ 
+                    title: '身份验证', 
+                    desc: '老板专属通道', 
+                    type: 'prompt', 
+                    inputType: 'password', 
+                    inputPlaceholder: '输入口令', 
+                    confirmText: '解锁' 
+                }); 
+                if (pwd === '888888') { 
+                    localStorage.setItem('isShopAdmin', 'true'); 
+                    try { localStorage.removeItem('ygf_products_cache'); } catch(e){} 
+                    showToast('解锁成功，正在刷新...', 'success'); 
+                    setTimeout(() => location.reload(), 800); 
+                } else if (pwd !== false && pwd !== 'close') { 
+                    showToast('密码错误', 'error'); 
+                } 
+            } 
+        }
+
+        // 6. 覆盖：公告编辑 (文本框)
+        async function openAnnouncementEdit() {
+            if (!isAdmin) return;
+            const currentText = announcementData ? announcementData.name : '';
+            const newText = await showModal({ 
+                title: '设置顶部公告', 
+                desc: '留空则不显示公告。', 
+                type: 'prompt', 
+                inputType: 'text', 
+                inputPlaceholder: '请输入公告内容', 
+                confirmText: '保存' 
+            });
+            if (newText !== false && newText !== 'close') {
+                showToast('保存中...', 'info');
+                try {
+                    let method = announcementData ? 'PATCH' : 'POST';
+                    let url = announcementData ? `${SUPABASE_URL}/rest/v1/products?id=eq.${announcementData.id}` : `${SUPABASE_URL}/rest/v1/products`;
+                    const dbPayload = { name: newText.trim(), category: '__announcement__', price: 0, in_stock: true };
+                    
+                    const response = await fetch(url, { 
+                        method: method, 
+                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, 
+                        body: JSON.stringify(dbPayload) 
+                    });
+                    
+                    if (!response.ok) throw new Error();
+                    showToast('公告已更新', 'success'); 
+                    try { localStorage.removeItem('ygf_products_cache'); } catch(e) { console.warn(e); } 
+                    fetchProducts();
+                } catch(e) { showToast('保存失败', 'error'); }
+            }
+        }
     </script>
 </body>
 </html>
