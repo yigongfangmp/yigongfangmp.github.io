@@ -413,12 +413,119 @@
         <div class="content-inner">
             <div class="grid" id="products-grid"></div>
             <div id="empty-state-msg" style="display: none; grid-column: 1 / -1; text-align: center; color: var(--text-secondary); margin-top: 60px; font-weight: 400; font-size: 14px;">这页暂无待售商品，待老板后台上新~</div>
-        <div style="margin-top: 40px; padding: 24px 20px; text-align: center; color: var(--text-secondary); font-size: 13px; line-height: 1.8; background: var(--card-color); border-radius: var(--radius-lg); border: 0.5px solid var(--divider); box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-    <div style="width: 32px; height: 4px; background: var(--accent-color); border-radius: 2px; margin: 0 auto 16px;"></div>
-    <p style="margin-bottom: 12px;">“人们往往只看到街头呼啸而过的残影，<br>却鲜少看到我们在深夜车库里研究线路、升级卡钳时的专注。”</p>
-    <p style="margin-bottom: 12px;"><strong style="color: var(--text-primary);">‘电改无罪’</strong>，因为追求性能的极致、渴望风的自由，以及对机械美学的纯粹热爱，本就不是一种罪过。每一个定制的部件，每一段精心调校的电控代码，都是我们拒绝平庸、为这台钢铁机器注入灵魂的证明。</p>
-    <p>但真正的玩家都懂得：<strong style="color: var(--text-primary);">无罪的前提，是敬畏。</strong><br>改装是为了贴地飞行的从容，而不是失去理智的失控。把刹车改得比油门更灵敏，把对规则的尊重和对生命的安全刻在每一次拧动把手之前。只有守住安全的底线，这份对‘电改’的执着与热爱，才能真正在阳光下自由驰骋。</p>
+        <div id="quote-block-wrap" style="margin-top: 40px; position: relative; overflow: hidden; text-align: center; color: var(--text-secondary); font-size: 13px; line-height: 1.8; background: var(--card-color); border-radius: var(--radius-lg); border: 0.5px solid var(--divider); box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+
+    <div id="quote-bg-img" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: contain; background-position: center; background-repeat: no-repeat; opacity: 0.12; pointer-events: none; transition: background-image 0.4s ease;"></div>
+
+    <div style="position: relative; z-index: 1; padding: 24px 20px;">
+        <div style="width: 32px; height: 4px; background: var(--accent-color); border-radius: 2px; margin: 0 auto 16px;"></div>
+        <p style="margin-bottom: 12px;">“人们往往只看到街头呼啸而过的残影，<br>却鲜少看到我们在深夜车库里研究线路、升级卡钳时的专注。”</p>
+        <p style="margin-bottom: 12px;"><strong style="color: var(--text-primary);">‘电改无罪’</strong>，因为追求性能的极致、渴望风的自由，以及对机械美学的纯粹热爱，本就不是一种罪过。每一个定制的部件，每一段精心调校的电控代码，都是我们拒绝平庸、为这台钢铁机器注入灵魂的证明。</p>
+        <p>但真正的玩家都懂得：<strong style="color: var(--text-primary);">无罪的前提，是敬畏。</strong><br>改装是为了贴地飞行的从容，而不是失去理智的失控。把刹车改得比油门更灵敏，把对规则的尊重和对生命的安全刻在每一次拧动把手之前。只有守住安全的底线，这份对‘电改’的执着与热爱，才能真正在阳光下自由驰骋。</p>
+    </div>
+
+    <button class="admin-only" onclick="document.getElementById('quote-bg-upload').click()" style="position: absolute; top: 12px; right: 12px; z-index: 2; background: rgba(0,0,0,0.5); color: #FFF; border: 0.5px solid rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; backdrop-filter: blur(4px);">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: -2px; margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>上传Logo水印
+    </button>
+    <input type="file" id="quote-bg-upload" accept="image/*" style="display:none" onchange="handleQuoteBgUpload(event)">
 </div>
+
+<script>
+// 拉取并应用云端 Logo 水印
+function applyQuoteBg() {
+    try {
+        const cache = localStorage.getItem('ygf_products_cache');
+        if (cache) {
+            const parsed = JSON.parse(cache);
+            if (parsed && parsed.data) {
+                // 利用被系统忽略的隐藏字段来静默存储背景图，不污染商品列表
+                const bgData = parsed.data.find(p => p.name === 'quote_bg_image' && p.category === '__deleted_category__');
+                if (bgData && bgData.image_url) {
+                    document.getElementById('quote-bg-img').style.backgroundImage = `url('${bgData.image_url}')`;
+                }
+            }
+        }
+    } catch(e) { console.warn('Logo加载异常', e); }
+}
+
+// 确保在主引擎加载完毕后挂载功能
+window.addEventListener('load', () => {
+    applyQuoteBg();
+    // 拦截并扩展全局数据刷新机制
+    if (typeof window.fetchProducts === 'function') {
+        const oldFetchProducts = window.fetchProducts;
+        window.fetchProducts = async function(...args) {
+            await oldFetchProducts.apply(this, args);
+            applyQuoteBg();
+        };
+    }
+});
+
+// 处理老板的上传与云端保存逻辑
+async function handleQuoteBgUpload(event) {
+    if (!isAdmin) return;
+    const file = event.target.files[0];
+    if (!file) return;
+    showToast('正在压缩并上传Logo...', 'info');
+    
+    try {
+        // 调用主引擎内置压缩
+        const compressedFile = await compressImage(file, 1000, 1000, 0.9);
+        const fileName = `quote-bg-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.png`;
+
+        // 上传到云端
+        const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${fileName}`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': compressedFile.type },
+            body: compressedFile
+        });
+        if (!uploadRes.ok) throw new Error('图片上传失败');
+
+        const imageUrl = `${SUPABASE_URL}/storage/v1/object/public/product-images/${fileName}`;
+
+        // 覆盖历史旧图逻辑
+        const cache = localStorage.getItem('ygf_products_cache');
+        let existingId = null;
+        if (cache) {
+            const parsed = JSON.parse(cache);
+            const oldBg = parsed.data.find(p => p.name === 'quote_bg_image' && p.category === '__deleted_category__');
+            if (oldBg) {
+                existingId = oldBg.id;
+                if (oldBg.image_url) deleteStorageFile(oldBg.image_url).catch(e => {}); 
+            }
+        }
+
+        // 保存入库
+        const dbPayload = { name: 'quote_bg_image', category: '__deleted_category__', price: 0, in_stock: false, image_url: imageUrl };
+        let url = `${SUPABASE_URL}/rest/v1/products`;
+        let method = 'POST';
+        if (existingId) {
+            url = `${SUPABASE_URL}/rest/v1/products?id=eq.${existingId}`;
+            method = 'PATCH';
+        }
+
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify(dbPayload)
+        });
+
+        if (!response.ok) throw new Error('数据库保存失败');
+
+        showToast('Logo底图更新成功！', 'success');
+        document.getElementById('quote-bg-img').style.backgroundImage = `url('${imageUrl}')`;
+
+        // 清理缓存强制刷新
+        try { localStorage.removeItem('ygf_products_cache'); } catch(e) {}
+        if (typeof fetchProducts === 'function') await fetchProducts();
+
+    } catch (error) {
+        showToast('上传失败: ' + error.message, 'error');
+    } finally {
+        event.target.value = ''; // 重置文件框
+    }
+}
+</script>
         </div>
     </div>
 
