@@ -788,8 +788,8 @@ async function handleQuoteBgUpload(event) {
             return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; 
         }
 
-        /* ================= 前端纯净压缩引擎 ================= */
-        async function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 0.8) {
+        /* ================= 前端纯净压缩引擎 (极致省流 WebP 版) ================= */
+        async function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.85) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
@@ -823,12 +823,12 @@ async function handleQuoteBgUpload(event) {
                                 resolve(file); 
                                 return;
                             }
-                            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
-                                type: 'image/jpeg',
+                            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                                type: 'image/webp',
                                 lastModified: Date.now()
                             });
                             resolve(newFile);
-                        }, 'image/jpeg', quality);
+                        }, 'image/webp', quality);
                     };
                 };
             });
