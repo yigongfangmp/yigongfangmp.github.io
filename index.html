@@ -451,6 +451,14 @@ function applyQuoteBg() {
 // 确保在主引擎加载完毕后挂载功能
 window.addEventListener('load', () => {
     applyQuoteBg();
+    
+    // 👇 新增修复逻辑：如果是老板模式，主动解除按钮的隐藏状态
+    if (typeof isAdmin !== 'undefined' && isAdmin) {
+        const uploadBtn = document.querySelector('#quote-block-wrap button.admin-only');
+        if (uploadBtn) uploadBtn.classList.remove('admin-only');
+    }
+    // 👆 新增修复结束
+
     // 拦截并扩展全局数据刷新机制
     if (typeof window.fetchProducts === 'function') {
         const oldFetchProducts = window.fetchProducts;
@@ -469,11 +477,9 @@ async function handleQuoteBgUpload(event) {
     showToast('正在压缩并上传Logo...', 'info');
     
     try {
-        // 调用主引擎内置压缩
         const compressedFile = await compressImage(file, 1000, 1000, 0.9);
         const fileName = `quote-bg-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.png`;
 
-        // 上传到云端
         const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${fileName}`, {
             method: 'POST',
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': compressedFile.type },
@@ -483,7 +489,6 @@ async function handleQuoteBgUpload(event) {
 
         const imageUrl = `${SUPABASE_URL}/storage/v1/object/public/product-images/${fileName}`;
 
-        // 覆盖历史旧图逻辑
         const cache = localStorage.getItem('ygf_products_cache');
         let existingId = null;
         if (cache) {
@@ -495,7 +500,6 @@ async function handleQuoteBgUpload(event) {
             }
         }
 
-        // 保存入库
         const dbPayload = { name: 'quote_bg_image', category: '__deleted_category__', price: 0, in_stock: false, image_url: imageUrl };
         let url = `${SUPABASE_URL}/rest/v1/products`;
         let method = 'POST';
@@ -515,14 +519,13 @@ async function handleQuoteBgUpload(event) {
         showToast('Logo底图更新成功！', 'success');
         document.getElementById('quote-bg-img').style.backgroundImage = `url('${imageUrl}')`;
 
-        // 清理缓存强制刷新
         try { localStorage.removeItem('ygf_products_cache'); } catch(e) {}
         if (typeof fetchProducts === 'function') await fetchProducts();
 
     } catch (error) {
         showToast('上传失败: ' + error.message, 'error');
     } finally {
-        event.target.value = ''; // 重置文件框
+        event.target.value = ''; 
     }
 }
 </script>
