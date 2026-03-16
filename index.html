@@ -734,7 +734,14 @@
             return `${name}_||_${config || ''}_||_${badge || ''}_||_${isPinned || false}_||_${stock !== undefined ? stock : 999}`; 
         }
 
-        const ORDER_STATUS_MAP = { 'new': '待处理', 'contacted': '已沟通', 'deposited': '已付定', 'shipped': '🚚 已发货', 'completed': '已成交', 'canceled': '已跑单' };
+        const ORDER_STATUS_MAP = { 
+            'new': '待处理', 
+            'contacted': '已沟通', 
+            'deposited': '已付定', 
+            'shipped': '<svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none" style="margin-right:2px; vertical-align:-2px;"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>已发货', 
+            'completed': '已成交', 
+            'canceled': '已跑单' 
+        };
         
         function decodeOrderContact(rawContact) {
             if (!rawContact) return { status: 'new', contact: '' };
@@ -784,7 +791,15 @@
             
             const toast = document.createElement('div'); 
             toast.className = `toast ${type}`; 
-            toast.innerText = (type === 'success' ? '✓ ' : (type === 'error' || type === 'warning' ? '! ' : '')) + msg;
+            
+            const iconMap = {
+                'success': '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" style="margin-right:6px;"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+                'error': '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" style="margin-right:6px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>',
+                'warning': '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" style="margin-right:6px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
+                'info': '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" style="margin-right:6px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>'
+            };
+            
+            toast.innerHTML = `<div style="display:flex; align-items:center; justify-content:center;">${iconMap[type] || ''}${escapeHTML(msg)}</div>`;
             
             container.appendChild(toast); 
             
@@ -920,7 +935,6 @@
             } 
         }
         
-        // 动态支持文本/密码键盘切换
         function showModal({ title, desc = '', type = 'confirm', inputType = 'text', inputPlaceholder = '', confirmText = '确定', cancelText = '取消' }) {
             return new Promise((resolve) => { 
                 if (globalModalResolve) { 
@@ -1316,7 +1330,7 @@
                         let line = lines[i].replace(/\r/g, '');
                         if (!line.trim() && i !== lines.length - 1) continue; 
                         if (line.includes('老板你好')) continue; 
-                        if (line.includes('🛒【壹工坊摩配')) continue; 
+                        if (line.includes('【壹工坊摩配')) continue; 
                         
                         if (line.includes('━━━━━━━━━━━━━━')) {
                             yOffset += 8;
@@ -1396,7 +1410,7 @@
             });
         };
 
-        // 2. 订单提交流程（整合了小票逻辑）
+        // 2. 订单提交流程（纯文本化）
         window.processOrderSubmission = async function(itemsArray, contactInfo, remarkInfo, btnId, isFromCart) {
             try { 
                 const lastSubmit = localStorage.getItem('yigongfang_last_submit_time'); 
@@ -1421,11 +1435,11 @@
                 const randomCode = Math.floor(1000 + Math.random() * 9000); 
                 const orderNo = `YGF-${dateStr}-${randomCode}`;
                 
-                let orderText = `🛒【壹工坊摩配 · 预定凭证】\n━━━━━━━━━━━━━━\n📦 订单编号：${orderNo}\n📞 联系方式：${contactInfo || '未预留'}\n`;
+                let orderText = `【壹工坊摩配 · 预定凭证】\n━━━━━━━━━━━━━━\n订单编号：${orderNo}\n联系方式：${contactInfo || '未预留'}\n`;
                 if (remarkInfo) {
-                    orderText += `📝 客户备注：${remarkInfo}\n`;
+                    orderText += `客户备注：${remarkInfo}\n`;
                 }
-                orderText += `━━━━━━━━━━━━━━\n✨ 选购明细：\n`; 
+                orderText += `━━━━━━━━━━━━━━\n选购明细：\n`; 
                 
                 let totalCents = 0; 
                 
@@ -1438,7 +1452,7 @@
                 });
                 
                 const totalStr = (totalCents / 100).toFixed(2); 
-                orderText += `━━━━━━━━━━━━━━\n💰 总计金额：¥${totalStr}\n\n💬 老板你好，以上是我选好的商品，请确认！`; 
+                orderText += `━━━━━━━━━━━━━━\n总计金额：¥${totalStr}\n\n老板你好，以上是我选好的商品，请确认！`; 
                 
                 window.currentOrderText = orderText;
 
@@ -2031,7 +2045,7 @@
                 let trackingText = '';
                 if (newStatus === 'shipped') {
                     const trackingInfo = await showModal({
-                        title: '🚚 填写发货信息 (可选)',
+                        title: '<div style="display:flex;align-items:center;justify-content:center;gap:6px;"><svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>填写发货信息 (可选)</div>',
                         desc: '输入快递公司和单号，顾客查单时能直接看到进度：<br><span style="font-size:11px;color:var(--text-secondary);">(不需要就留空，直接点确认发货)</span>',
                         type: 'prompt',
                         inputType: 'text',
@@ -2042,7 +2056,7 @@
                     if (trackingInfo === false || trackingInfo === 'close') return; 
                     
                     if (trackingInfo.trim()) {
-                        trackingText = `\n\n━━━━━━━━━━━━━━\n📦【物流更新】\n时间：${formatDate(new Date().toISOString())}\n进度：已发货\n单号：${trackingInfo.trim()}\n━━━━━━━━━━━━━━`;
+                        trackingText = `\n\n━━━━━━━━━━━━━━\n【物流更新】\n时间：${formatDate(new Date().toISOString())}\n进度：已发货\n单号：${trackingInfo.trim()}\n━━━━━━━━━━━━━━`;
                     }
                 }
 
@@ -2054,7 +2068,7 @@
                     if (trackingText) {
                         const targetOrder = globalActiveOrders.find(o => String(o.id) === String(orderId));
                         if (targetOrder && targetOrder.content) {
-                            let baseContent = targetOrder.content.split('\n\n━━━━━━━━━━━━━━\n📦【物流更新】')[0];
+                            let baseContent = targetOrder.content.split('\n\n━━━━━━━━━━━━━━\n【物流更新】')[0];
                             payload.content = baseContent + trackingText;
                         }
                     }
@@ -2173,7 +2187,8 @@
             
             globalActiveOrders.forEach(o => {
                 const parsed = decodeOrderContact(o.contact);
-                const status = ORDER_STATUS_MAP[parsed.status] || '未知';
+                const statusHtml = ORDER_STATUS_MAP[parsed.status] || '未知';
+                const status = statusHtml.replace(/<[^>]+>/g, '').trim(); 
                 const date = formatDate(o.created_at);
                 const contact = `"${parsed.contact.replace(/"/g, '""')}"`;
                 const content = `"${o.content.replace(/"/g, '""')}"`;
@@ -2228,7 +2243,7 @@
             });
 
             if (isAdmin) {
-                html += `<div class="zone-tab" style="color:var(--text-secondary); cursor:pointer; font-size: 14px; display:flex; align-items:center;" onclick="addNewZone()">➕ 添新栏目</div>`;
+                html += `<div class="zone-tab" style="color:var(--text-secondary); cursor:pointer; font-size: 14px; display:flex; align-items:center; gap: 4px;" onclick="addNewZone()"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>添新栏目</div>`;
             }
 
             switcher.innerHTML = html;
@@ -2269,7 +2284,7 @@
             });
 
             if (isAdmin) {
-                html += `<button class="filter-btn" style="border: 1px dashed var(--text-secondary); color: var(--text-secondary); padding: 6px 12px; background: transparent;" onclick="addNewCategory()">➕ 添加分类</button>`;
+                html += `<button class="filter-btn" style="border: 1px dashed var(--text-secondary); color: var(--text-secondary); padding: 6px 12px; background: transparent; display: flex; align-items: center; gap: 4px;" onclick="addNewCategory()"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>添加分类</button>`;
             }
             
             filterBar.innerHTML = html;
@@ -2471,7 +2486,12 @@
             applyDOMFilter(); 
         }
 
-        const BADGE_MAP = { 'hot': '🔥 爆款推荐', 'discount': '📉 特价限时', 'new': '🆕 新品上架', 'clearance': '处理清仓' };
+        const BADGE_MAP = { 
+            'hot': '<svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none" style="margin-right:2px; vertical-align:-1px;"><path d="M17.5 19c-1.5 0-2.5-1-2.5-2.5a2.5 2.5 0 0 1 1.5-2.3 4 4 0 0 0-1.5-5.2c-.5-.3-1-.5-1.5-.5a3 3 0 0 0-2 1c-.5.5-1 1.5-1 2.5a4 4 0 0 1-1.5 3c-1.5 1-2.5 2.5-2.5 4A4.5 4.5 0 0 0 12 23.5c2.5 0 4.5-2 4.5-4.5 0-1 0-2-.5-3 .5 1 1 2 1 3z"></path></svg>爆款推荐', 
+            'discount': '<svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none" style="margin-right:2px; vertical-align:-1px;"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>特价限时', 
+            'new': '<svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none" style="margin-right:2px; vertical-align:-1px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>新品上架', 
+            'clearance': '处理清仓' 
+        };
         
         function renderProducts() {
             const grid = document.getElementById('products-grid'); 
@@ -2947,7 +2967,7 @@
                 customUsedCats.forEach(cc => { if(!merged.some(u => u.name === cc.name)) merged.push(cc); });
 
                 catSelect.innerHTML = merged.filter(c => c.id !== 'used_all').map(cat => `<option value="${cat.id}">${escapeHTML(cat.name)}</option>`).join(''); 
-                catSelect.innerHTML += `<option value="custom">➕ 手动添加新车型...</option>`; 
+                catSelect.innerHTML += `<option value="custom">+ 手动添加新车型...</option>`; 
             } else {
                 nameLabel.innerText = "商品名称";
                 configGroup.style.display = 'none';
