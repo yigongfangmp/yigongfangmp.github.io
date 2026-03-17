@@ -3188,6 +3188,16 @@ async function handleQuoteBgUpload(event) {
         }
         
         function parseFetchedData(allData) { 
+            // ================= 新增：Cloudflare CDN 流量拦截器 =================
+            // 下面这行我已经帮你填好了你的专属加速链接：
+            const CDN_HOST = 'https://round-fire-6ca2.1928665320.workers.dev'; 
+            allData.forEach(item => {
+                if (item.image_url) {
+                    item.image_url = item.image_url.replaceAll('https://jcwakdehorzivjbcxcmy.supabase.co', CDN_HOST);
+                }
+            });
+            // ====================================================================
+
             const qrData = allData.find(p => p.category === '__qr_code__'); 
             if (qrData) { qrCodeUrl = qrData.image_url; qrCodeId = qrData.id; } 
             else { qrCodeUrl = ''; qrCodeId = null; } 
