@@ -407,7 +407,17 @@
             transform: scale(1.05); 
         }
         :root.light-mode .filter-btn.active { color: #FFF; }
-
+/* 5. 修复分类胶囊按钮上下边缘被切割问题 */
+        .filter-scroll {
+            padding-top: 8px !important;      /* 给上方稍微放大留出空间 */
+            padding-bottom: 16px !important;  /* 给底部发光阴影留出充足空间 */
+            align-items: center;
+        }
+        @media (max-width: 768px) {
+            .filter-bar {
+                padding-bottom: 0px !important; /* 抵消多出的高度，避免整个头部变太宽 */
+            }
+        }
     </style>
 </head>
 <body>
