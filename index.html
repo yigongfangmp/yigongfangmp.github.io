@@ -436,36 +436,40 @@
             </style>
 
             <script>
-                // 动态无痕拦截器：在加载时自动介入渲染，不破坏底部原逻辑
-                window.addEventListener('DOMContentLoaded', () => {
-                    // 稍微延迟 100 毫秒，等你的核心数据库加载完毕后再挂载
-                    setTimeout(() => {
-                        if (typeof isAdmin !== 'undefined' && isAdmin) {
+                // 动态无痕拦截器：使用高频轮询彻底解决光速加载时的时差Bug
+                let interceptorTimer = setInterval(() => {
+                    if (typeof window.renderProducts === 'function' && typeof window.products !== 'undefined') {
+                        clearInterval(interceptorTimer);
+                        
+                        const isBoss = typeof isAdmin !== 'undefined' && isAdmin;
+                        if (isBoss) {
                             const uploadBtn = document.querySelector('#showcase-gallery-wrap button.admin-only');
                             if (uploadBtn) { uploadBtn.classList.remove('admin-only'); uploadBtn.style.display = 'block'; }
                         }
                         
-                        if (typeof window.renderProducts === 'function') {
-                            const oldRenderProducts = window.renderProducts;
-                            window.renderProducts = function(...args) {
-                                renderShowcaseGallery();
-                                oldRenderProducts.apply(this, args);
-                            };
+                        const oldRenderProducts = window.renderProducts;
+                        window.renderProducts = function(...args) {
+                            renderShowcaseGallery();
+                            oldRenderProducts.apply(this, args);
+                        };
+
+                        // 如果商品已经渲染完毕（从缓存光速加载），立即强行补一针渲染
+                        if (window.products && window.products.length > 0) {
+                            window.renderProducts();
                         }
-                    }, 100);
-                });
+                    }
+                }, 20);
 
                 function renderShowcaseGallery() {
                     const wrap = document.getElementById('showcase-gallery-wrap');
                     const scrollArea = document.getElementById('showcase-scroll-area');
                     
-                    // 修复点：直接读取受保护的 products 变量
                     if (!wrap || !scrollArea || typeof products === 'undefined') return;
 
                     const showcaseData = [];
                     const normalProducts = [];
                     
-                    // 把风云榜的作品和普通商品完美剥离开
+                    // 安全分离数据，防止和下方商品混淆
                     products.forEach(p => {
                         if (p.category === '__customer_gallery__') {
                             showcaseData.push(p);
