@@ -507,14 +507,15 @@
 
                     const descText = await showModal({
                         title: '发布车友作品',
-                        desc: '输入一段帅气的文案，让车友拿去群里炫耀（如：北京张哥 | 全套 Ohlins+Brembo）',
+                        desc: '输入一段帅气文案<br><b style="color:var(--accent-color); font-size:12px;">（选填：什么都不填直接点发布也可以）</b>',
                         type: 'prompt',
                         inputType: 'text',
-                        inputPlaceholder: '字数尽量精简，突出重点',
+                        inputPlaceholder: '如：北京张哥 | 全套 Ohlins+Brembo',
                         confirmText: '立即发布'
                     });
 
-                    if (descText && descText !== 'close') {
+                    // 核心修改点：允许“交白卷”（空字符串）通过，只有点击取消才会拦截
+                    if (descText !== false && descText !== 'close') {
                         showToast('正在压缩并发布作品...', 'info');
                         try {
                             const compressedFile = await compressImage(file, 1200, 1200, 0.85);
@@ -529,7 +530,10 @@
                             if (!uploadRes.ok) throw new Error('图片上传失败'); 
                             
                             const imageUrl = `${SUPABASE_URL}/storage/v1/object/public/product-images/${fileName}`; 
-                            const dbPayload = { name: descText.trim() || '壹工坊重磅大作', category: '__customer_gallery__', price: 0, in_stock: true, image_url: imageUrl }; 
+                            
+                            // 如果老板什么都没填，为了排版好看，默认显示一句“壹工坊重磅大作”
+                            const finalDescText = (typeof descText === 'string' && descText.trim()) ? descText.trim() : '壹工坊重磅大作';
+                            const dbPayload = { name: finalDescText, category: '__customer_gallery__', price: 0, in_stock: true, image_url: imageUrl }; 
                             
                             const response = await fetch(`${SUPABASE_URL}/rest/v1/products`, { 
                                 method: 'POST', 
