@@ -3409,6 +3409,14 @@ async function handleQuoteBgUpload(event) {
             });
             // ====================================================================
 
+            // ======= 终极修复：直接在这里读取名言Logo底图，彻底抛弃本地缓存依赖 =======
+            const bgData = allData.find(p => p.name === 'quote_bg_image' && p.category === '__deleted_category__');
+            if (bgData && bgData.image_url) {
+                const bgEl = document.getElementById('quote-bg-img');
+                if (bgEl) bgEl.style.backgroundImage = `url('${bgData.image_url}')`;
+            }
+            // ====================================================================
+
             const qrData = allData.find(p => p.category === '__qr_code__'); 
             if (qrData) { qrCodeUrl = qrData.image_url; qrCodeId = qrData.id; } 
             else { qrCodeUrl = ''; qrCodeId = null; } 
