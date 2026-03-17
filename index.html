@@ -3482,7 +3482,7 @@ async function handleQuoteBgUpload(event) {
                         syncCartWithDatabase();
                         hasRenderedCache = true;
 
-                        const CACHE_LIFETIME = isAdmin ? 0 : 60 * 60 * 1000;
+                        const CACHE_LIFETIME = isAdmin ? 0 : 10 * 1000;
                         if (Date.now() - cacheObj.timestamp < CACHE_LIFETIME) {
                             return; 
                         }
