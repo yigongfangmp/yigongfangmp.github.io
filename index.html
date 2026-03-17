@@ -438,36 +438,46 @@
             <script>
                 // 动态无痕拦截器：在加载时自动介入渲染，不破坏底部原逻辑
                 window.addEventListener('DOMContentLoaded', () => {
-                    if (typeof isAdmin !== 'undefined' && isAdmin) {
-                        const uploadBtn = document.querySelector('#showcase-gallery-wrap button.admin-only');
-                        if (uploadBtn) { uploadBtn.classList.remove('admin-only'); uploadBtn.style.display = 'block'; }
-                    }
-                    
-                    if (typeof window.renderProducts === 'function') {
-                        const oldRenderProducts = window.renderProducts;
-                        window.renderProducts = function(...args) {
-                            renderShowcaseGallery();
-                            oldRenderProducts.apply(this, args);
-                        };
-                    }
+                    // 稍微延迟 100 毫秒，等你的核心数据库加载完毕后再挂载
+                    setTimeout(() => {
+                        if (typeof isAdmin !== 'undefined' && isAdmin) {
+                            const uploadBtn = document.querySelector('#showcase-gallery-wrap button.admin-only');
+                            if (uploadBtn) { uploadBtn.classList.remove('admin-only'); uploadBtn.style.display = 'block'; }
+                        }
+                        
+                        if (typeof window.renderProducts === 'function') {
+                            const oldRenderProducts = window.renderProducts;
+                            window.renderProducts = function(...args) {
+                                renderShowcaseGallery();
+                                oldRenderProducts.apply(this, args);
+                            };
+                        }
+                    }, 100);
                 });
 
                 function renderShowcaseGallery() {
                     const wrap = document.getElementById('showcase-gallery-wrap');
                     const scrollArea = document.getElementById('showcase-scroll-area');
-                    if (!wrap || !scrollArea || !window.products) return;
+                    
+                    // 修复点：直接读取受保护的 products 变量
+                    if (!wrap || !scrollArea || typeof products === 'undefined') return;
 
-                    // 从全局商品池中安全提取作品图鉴，防止其混入下方的普通售卖列表
                     const showcaseData = [];
-                    window.products = window.products.filter(p => {
+                    const normalProducts = [];
+                    
+                    // 把风云榜的作品和普通商品完美剥离开
+                    products.forEach(p => {
                         if (p.category === '__customer_gallery__') {
                             showcaseData.push(p);
-                            return false; 
+                        } else {
+                            normalProducts.push(p);
                         }
-                        return true;
                     });
+                    products = normalProducts; 
 
-                    if (showcaseData.length === 0 && !isAdmin) {
+                    const isBoss = typeof isAdmin !== 'undefined' && isAdmin;
+
+                    if (showcaseData.length === 0 && !isBoss) {
                         wrap.style.display = 'none';
                         return;
                     }
@@ -479,7 +489,7 @@
                         html += `<div class="showcase-card">
                             <img src="${escapeHTML(item.image_url)}" onclick="openImageViewer(this.src)">
                             <div class="showcase-desc">${escapeHTML(item.name)}</div>
-                            ${isAdmin ? `<button class="showcase-del-btn" onclick="deleteShowcase('${escapeJS(String(item.id))}')">×</button>` : ''}
+                            ${isBoss ? `<button class="showcase-del-btn" onclick="deleteShowcase('${escapeJS(String(item.id))}')">×</button>` : ''}
                         </div>`;
                     });
                     
@@ -487,7 +497,7 @@
                 }
 
                 window.handleShowcaseUpload = async function(event) {
-                    if (!isAdmin) return;
+                    if (typeof isAdmin === 'undefined' || !isAdmin) return;
                     const file = event.target.files[0];
                     if (!file) return;
 
@@ -535,7 +545,7 @@
                 };
 
                 window.deleteShowcase = async function(id) {
-                    if (!isAdmin) return;
+                    if (typeof isAdmin === 'undefined' || !isAdmin) return;
                     const confirmed = await showModal({ title: '移除作品', desc: '确定将该车主的爱车从风云榜上移除吗？', confirmText: '确认移除', cancelText: '保留' }); 
                     if (confirmed !== true) return; 
                     
