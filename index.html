@@ -488,16 +488,19 @@
                     
                     let html = '';
                     showcaseData.reverse().forEach(item => {
-                        // 【巧妙借用】使用原本闲置的 price 字段来存储云端点赞数
                         const likesCount = Math.floor(item.price || 0);
                         const isLiked = localStorage.getItem(`liked_${item.id}`);
                         
                         const heartEmpty = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
                         const heartFilled = `<svg viewBox="0 0 24 24" width="14" height="14" fill="#FF4142" stroke="#FF4142" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
                         
+                        // 核心修改点：检测有没有字，没字的话，直接把底部黑色渐变背景隐藏掉！
+                        const itemName = (item.name || '').trim();
+                        const descHtml = itemName ? `<div class="showcase-desc" style="padding-right: 64px;">${escapeHTML(itemName)}</div>` : '';
+
                         html += `<div class="showcase-card">
                             <img src="${escapeHTML(item.image_url)}" onclick="openImageViewer(this.src)">
-                            <div class="showcase-desc" style="padding-right: 64px;">${escapeHTML(item.name)}</div>
+                            ${descHtml}
                             
                             <div onclick="toggleShowcaseLike('${escapeJS(String(item.id))}', this)" data-likes="${likesCount}" style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); padding: 4px 10px; border-radius: 99px; display: flex; align-items: center; gap: 4px; color: ${isLiked ? '#FF4142' : '#FFF'}; font-size: 12px; font-weight: 600; cursor: pointer; z-index: 10; border: 0.5px solid rgba(255,255,255,0.2); transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);">
                                 ${isLiked ? heartFilled : heartEmpty}
@@ -511,7 +514,6 @@
                     scrollArea.innerHTML = html;
                 }
 
-                // 新增：防刷赞、带心跳动效的云端点赞逻辑
                 window.toggleShowcaseLike = async function(id, btnEl) {
                     triggerHaptic();
                     const isLiked = localStorage.getItem(`liked_${id}`);
@@ -522,7 +524,6 @@
                         return;
                     }
 
-                    // 1. 立即更新UI（乐观渲染，给用户秒赞的快感）
                     currentLikes++;
                     btnEl.setAttribute('data-likes', currentLikes);
                     btnEl.style.color = '#FF4142';
@@ -531,10 +532,8 @@
                     
                     setTimeout(() => { btnEl.style.transform = 'scale(1)'; }, 200);
 
-                    // 2. 写入本地缓存，防止同一手机无限刷赞
                     localStorage.setItem(`liked_${id}`, 'true');
 
-                    // 3. 后台静默发送更新请求（拦截原来的 price 字段）
                     try {
                         const targetItem = products.concat(window.products || []).find(p => String(p.id) === String(id));
                         if (targetItem) targetItem.price = currentLikes;
@@ -545,7 +544,6 @@
                             body: JSON.stringify({ price: currentLikes })
                         });
                         
-                        // 静默清理缓存，保证其他顾客刷新能看到最新点赞数
                         try { localStorage.removeItem('ygf_products_cache'); } catch(e){}
                     } catch(e) {
                         console.warn('Like sync failed', e);
@@ -559,14 +557,13 @@
 
                     const descText = await showModal({
                         title: '发布车友作品',
-                        desc: '输入一段帅气文案<br><b style="color:var(--accent-color); font-size:12px;">（选填：什么都不填直接点发布也可以）</b>',
+                        desc: '输入一段帅气文案<br><b style="color:var(--accent-color); font-size:12px;">（选填：什么都不填直接点发布，就会变成纯净全画幅照片）</b>',
                         type: 'prompt',
                         inputType: 'text',
                         inputPlaceholder: '如：北京张哥 | 全套 Ohlins+Brembo',
                         confirmText: '立即发布'
                     });
 
-                    // 修改点：允许交白卷（只有点取消才拦截）
                     if (descText !== false && descText !== 'close') {
                         showToast('正在压缩并发布作品...', 'info');
                         try {
@@ -583,8 +580,8 @@
                             
                             const imageUrl = `${SUPABASE_URL}/storage/v1/object/public/product-images/${fileName}`; 
                             
-                            // 如果什么都不填，默认显示为“壹工坊重磅大作”
-                            const finalDescText = (typeof descText === 'string' && descText.trim()) ? descText.trim() : '壹工坊重磅大作';
+                            // 核心修改点：如果什么都不填，传一个空格占位符给数据库，前端渲染时检测为空，就会去掉黑底显示纯图！
+                            const finalDescText = (typeof descText === 'string' && descText.trim()) ? descText.trim() : ' ';
                             const dbPayload = { name: finalDescText, category: '__customer_gallery__', price: 0, in_stock: true, image_url: imageUrl }; 
                             
                             const response = await fetch(`${SUPABASE_URL}/rest/v1/products`, { 
