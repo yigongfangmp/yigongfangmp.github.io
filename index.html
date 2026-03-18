@@ -3658,16 +3658,16 @@ async function handleQuoteBgUpload(event) {
         }
         
         function parseFetchedData(allData) { 
-            // ================= 新增：Cloudflare CDN 流量拦截器 =================
-            // 下面这行我已经帮你填好了你的专属加速链接：
-            //const CDN_HOST = 'https://round-fire-6ca2.1928665320.workers.dev'; 
-            //allData.forEach(item => {
-                //if (item.image_url) {
-                    //item.image_url = item.image_url.replaceAll('https://jcwakdehorzivjbcxcmy.supabase.co', CDN_HOST);
-               // }
-          //  });
-            // ====================================================================
+            // ================= 新增：Gcore 流量拦截器 =================
+const CDN_HOST = 'https://cl-gl5d6462f0.gcdn.co'; 
 
+allData.forEach(item => {
+    if (item.image_url) {
+        // 悄悄把直连地址替换成 Gcore 节点
+        item.image_url = item.image_url.replaceAll('https://jcwakdehorzivjbcxcmy.supabase.co', CDN_HOST);
+    }
+});
+// ==========================================================
             // ======= 终极修复：直接在这里读取名言Logo底图，彻底抛弃本地缓存依赖 =======
             const bgData = allData.find(p => p.name === 'quote_bg_image' && p.category === '__deleted_category__');
             if (bgData && bgData.image_url) {
