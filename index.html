@@ -347,42 +347,25 @@
             .cart-panel { width: 100%; border-left: none; }
         }
 
-        /* ================= 极简机车风 UI 升级包 ================= */
+        /* ================= 极简机车风 & 大厂按钮 UI 升级包 ================= */
         
-        /* 1. 卡片高级质感与光影 */
+        /* 1. 卡片高级质感与光影 (保留原版) */
         .card {
             background: linear-gradient(145deg, var(--card-color) 0%, var(--bg-color) 100%);
             box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05), 0 2px 8px rgba(0,0,0,0.04);
         }
-        :root:not(.light-mode) .card {
-            border: 1px solid rgba(255, 255, 255, 0.08); 
-        }
-        @media (hover: hover) { 
-            .card:hover { 
-                transform: translateY(-5px); 
-                box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1), 0 12px 24px var(--accent-shadow); 
-            } 
-        }
+        :root:not(.light-mode) .card { border: 1px solid rgba(255, 255, 255, 0.08); }
+        @media (hover: hover) { .card:hover { transform: translateY(-5px); box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1), 0 12px 24px var(--accent-shadow); } }
         .card-img { border-bottom: 0.5px solid var(--divider); }
 
-        /* 2. 价格数字仪表盘化 (倾斜加粗速度感) */
-        .price-wrap { 
-            font-family: "SF Pro Display", "Impact", "Arial Black", sans-serif; 
-            font-style: italic; 
-            text-shadow: 1px 1px 0px rgba(0,0,0,0.1);
-        }
+        /* 2. 价格数字仪表盘化 (保留原版) */
+        .price-wrap { font-family: "SF Pro Display", "Impact", "Arial Black", sans-serif; font-style: italic; text-shadow: 1px 1px 0px rgba(0,0,0,0.1); }
         .price { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; }
         .price-symbol { font-size: 14px; font-style: normal; }
 
-        /* 3. 卡片丝滑呼吸感出场动画 */
-        @keyframes slideUpFade {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .card:not(.skeleton) {
-            animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            opacity: 0; 
-        }
+        /* 3. 卡片丝滑呼吸感出场动画 (保留原版) */
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .card:not(.skeleton) { animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
         .card:nth-child(1) { animation-delay: 0.05s; }
         .card:nth-child(2) { animation-delay: 0.1s; }
         .card:nth-child(3) { animation-delay: 0.15s; }
@@ -392,40 +375,56 @@
         .card:nth-child(7) { animation-delay: 0.35s; }
         .card:nth-child(8) { animation-delay: 0.4s; }
 
-/* 4. 分类按钮科技胶囊化 (精致小巧版) */
-        .filter-btn {
-            border-radius: 100px; 
-            padding: 5px 14px; /* 缩小了内边距，让按钮变瘦 */
-            font-size: 13px;   /* 字号稍微调小一号，显得更精致 */
-            border: 1px solid var(--divider);
-            background: var(--card-color);
-            margin: 0 2px;     /* 给按钮左右加上微小间距，防止最边缘阴影被切 */
-            transition: all 0.2s ease;
+        /* 4. 全局大厂风格按钮：高对比度、呼吸感、毛玻璃 */
+        button, .filter-btn, .fab-map-btn, .details-btn, .add-btn, .checkout-btn, .delete-btn {
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.3s ease, box-shadow 0.3s ease, color 0.3s ease !important;
         }
-        .filter-btn.active { 
-            background: linear-gradient(135deg, var(--accent-color), #FF7B00); 
-            color: #FFF; 
-            border-color: transparent;
-            box-shadow: 0 4px 10px var(--accent-shadow); /* 稍微收敛了阴影扩散范围 */
-            transform: translateY(-1px); /* 取消了放大效果，改为微小的上浮，更清爽 */
-        }
-        :root.light-mode .filter-btn.active { color: #FFF; }
+        button:active, .filter-btn:active, .fab-map-btn:active { transform: scale(0.94) !important; opacity: 0.9; }
 
-        /* 5. 修复滑动容器四周边角被切割问题 */
-        .filter-scroll {
-            padding-top: 6px !important;      
-            padding-bottom: 14px !important;  
-            padding-left: 4px !important;  /* 强行撑开最左侧的阴影空间 */
-            align-items: center;
+        /* 结算/大操作按钮 (12px圆角 + 高级反色) */
+        .checkout-btn {
+            background: var(--text-primary) !important; color: var(--bg-color) !important;
+            border-radius: 12px !important; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+            border: none !important; font-weight: 600 !important; letter-spacing: 0.5px;
         }
+        :root:not(.light-mode) .checkout-btn { box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3) !important; }
+        #checkout-btn, #install-checkout-btn, #submit-btn {
+            background: var(--accent-color) !important; color: #FFF !important; box-shadow: 0 6px 20px var(--accent-shadow) !important;
+        }
+
+        /* 分类标签 (黑白极简风格) */
+        .filter-btn {
+            border-radius: 999px !important; background: var(--img-bg) !important; color: var(--text-secondary) !important;
+            border: 1px solid transparent !important; padding: 7px 16px !important; font-size: 14px !important; margin: 0 2px;
+        }
+        .filter-btn.active {
+            background: var(--text-primary) !important; color: var(--bg-color) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important; transform: none !important;
+        }
+
+        /* 卡片内部操作按钮 */
+        .add-btn { background: var(--text-primary) !important; color: var(--bg-color) !important; box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important; }
+        .details-btn { background: var(--img-bg) !important; color: var(--text-primary) !important; border: 1px solid var(--divider) !important; font-weight: 500 !important; box-shadow: none !important; }
+        
+        /* 危险按钮 */
+        .delete-btn { background: rgba(255, 65, 66, 0.1) !important; color: var(--accent-color) !important; border: none !important; border-radius: 12px !important; font-weight: 600 !important; }
+
+        /* 右下角悬浮按钮 (iOS毛玻璃) */
+        .fab-map-btn {
+            background: rgba(255, 255, 255, 0.85) !important; color: #111 !important;
+            backdrop-filter: saturate(180%) blur(20px) !important; -webkit-backdrop-filter: saturate(180%) blur(20px) !important;
+            border: 0.5px solid rgba(0,0,0,0.08) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+        }
+        :root:not(.light-mode) .fab-map-btn {
+            background: rgba(30, 30, 30, 0.85) !important; color: #FFF !important;
+            border: 0.5px solid rgba(255,255,255,0.1) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+        }
+
+        /* 5. 修复滑动容器四周边角被切割问题 (保留原版) */
+        .filter-scroll { padding-top: 6px !important; padding-bottom: 14px !important; padding-left: 4px !important; align-items: center; }
         @media (max-width: 768px) {
-            .filter-bar {
-                padding-bottom: 0px !important; 
-            }
-            .filter-scroll {
-                margin-left: -4px; /* 抵消掉 padding-left 的位移，保持整体居中对齐 */
-                padding-right: 20px !important; /* 给最右侧留出滑动余量 */
-            }
+            .filter-bar { padding-bottom: 0px !important; }
+            .filter-scroll { margin-left: -4px; padding-right: 20px !important; }
         }
     </style>
 </head>
