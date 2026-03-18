@@ -478,6 +478,132 @@
             border: 0.5px solid rgba(0,0,0,0.08);
             box-shadow: 0 4px 16px rgba(0,0,0,0.08);
         }
+        /* ================= 大厂质感 UI 升级包 (全局按钮 & 悬浮窗) ================= */
+
+/* 1. 全局主操作按钮 (结账等) - 纯粹质感与柔和弥散阴影 */
+.checkout-btn {
+    background: var(--accent-color);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    box-shadow: 0 8px 20px rgba(255, 65, 66, 0.25);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+@media (hover: hover) { 
+    .checkout-btn:hover:not(:disabled) { 
+        transform: translateY(-2px); 
+        box-shadow: 0 12px 24px rgba(255, 65, 66, 0.35); 
+        filter: brightness(1.05);
+    } 
+}
+.checkout-btn:active:not(:disabled) { 
+    transform: scale(0.96); 
+    box-shadow: 0 4px 10px rgba(255, 65, 66, 0.15); 
+    filter: brightness(0.95);
+    opacity: 1;
+}
+
+/* 2. 购物车小加号 - 饱满圆润 */
+.add-btn {
+    background: var(--accent-color);
+    color: #FFF;
+    box-shadow: 0 4px 12px rgba(255, 65, 66, 0.3);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.add-btn:active:not(:disabled) { 
+    transform: scale(0.85); 
+    box-shadow: 0 2px 6px rgba(255, 65, 66, 0.2); 
+}
+
+/* 3. 次级动作按钮 (详情) - 浅色流态背景 */
+.details-btn {
+    background: var(--accent-bg);
+    color: var(--accent-color);
+    font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 999px;
+    transition: all 0.2s ease;
+}
+.details-btn:active { 
+    transform: scale(0.92); 
+    background: rgba(255, 65, 66, 0.2); 
+}
+
+/* 4. 危险/删除按钮 - 极简描边风 */
+.delete-btn {
+    background: transparent;
+    color: #FF3B30; 
+    border: 1px solid rgba(255, 59, 48, 0.3);
+    font-weight: 500;
+}
+@media (hover: hover) { 
+    .delete-btn:hover { background: rgba(255, 59, 48, 0.05); border-color: #FF3B30; color: #FF3B30;} 
+}
+.delete-btn:active { 
+    transform: scale(0.96); 
+    background: rgba(255, 59, 48, 0.1); 
+    border-color: #FF3B30; 
+}
+
+/* 5. 分类筛选按钮 - 黑白高对比度 */
+.filter-btn {
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    background: var(--img-bg);
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: none;
+}
+.filter-btn.active {
+    font-weight: 600;
+    transform: translateY(0);
+}
+:root.light-mode .filter-btn.active { background: #1A1A1A; color: #FFFFFF; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+:root:not(.light-mode) .filter-btn.active { background: #FFFFFF; color: #121212; box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1); }
+
+/* 6. 悬浮按钮高亮升级 (自带件装车 & 门店位置) */
+.fab-map-btn {
+    padding: 14px 22px !important;
+    border-radius: 999px !important;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px !important;
+    border: none !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+@media (hover: hover) { 
+    .fab-map-btn:hover { transform: translateY(-2px); filter: brightness(1.05); } 
+}
+.fab-map-btn:active { transform: scale(0.96); filter: brightness(0.95); }
+
+/* 自带件装车 - 高反差极简色 */
+.install-fab {
+    bottom: calc(84px + env(safe-area-inset-bottom)) !important; 
+    background: var(--text-primary) !important; 
+    color: var(--bg-color) !important;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2) !important;
+}
+:root:not(.light-mode) .install-fab {
+    box-shadow: 0 12px 28px rgba(255, 255, 255, 0.15) !important;
+}
+
+/* 门店位置 - 品牌主色调 */
+.location-fab {
+    bottom: calc(24px + env(safe-area-inset-bottom)) !important;
+    background: var(--accent-color) !important; 
+    color: #FFFFFF !important;
+    box-shadow: 0 12px 28px var(--accent-shadow) !important;
+}
     </style>
 </head>
 <body>
@@ -878,12 +1004,13 @@ async function handleQuoteBgUpload(event) {
         </div>
     </div>
 
-    <button class="fab-map-btn" style="bottom: calc(84px + env(safe-area-inset-bottom)); background: linear-gradient(90deg, #FF6B00, var(--accent-color)); color: #FFF; border-color: transparent; box-shadow: 0 6px 16px var(--accent-shadow);" onclick="openInstallPanel()">
+    <button class="fab-map-btn install-fab" onclick="openInstallPanel()">
+        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
         自带件装车
     </button>
 
-    <button class="fab-map-btn" onclick="openMapModal()">
-        <svg viewBox="0 0 24 24" width="18" height="18" stroke="var(--accent-color)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+    <button class="fab-map-btn location-fab" onclick="openMapModal()">
+        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
         门店位置
     </button>
 
