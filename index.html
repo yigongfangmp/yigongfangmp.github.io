@@ -20,7 +20,9 @@
                 } else {
                     if (themeMeta) themeMeta.setAttribute('content', '#121212');
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.warn('Theme init failed:', e);
+            }
         })();
     </script>
     <style>
@@ -60,6 +62,7 @@
         .announcement-bar .marquee { white-space: nowrap; overflow: hidden; display: inline-block; animation: marquee 15s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
 
+        /* 动画：向下滑动提示 */
         @keyframes bounceDown { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
         .scroll-hint-icon { display: inline-block; animation: bounceDown 1.5s ease-in-out infinite; }
 
@@ -122,6 +125,7 @@
         .card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; pointer-events: none;}
         @media (hover: hover) { .card:hover .card-img img { transform: scale(1.03); } }
         
+        /* ===== 大厂风格：状态标签 ===== */
         .stock-badge { 
             position: absolute; top: 10px; left: 10px; 
             background: rgba(0, 0, 0, 0.65); 
@@ -129,15 +133,15 @@
             font-size: 11px; 
             font-weight: 600; 
             padding: 4px 10px; 
-            border-radius: 999px; 
-            backdrop-filter: saturate(180%) blur(12px); 
+            border-radius: 999px; /* 胶囊圆角 */
+            backdrop-filter: saturate(180%) blur(12px); /* 高级毛玻璃 */
             -webkit-backdrop-filter: saturate(180%) blur(12px); 
             z-index: 2; 
             pointer-events: none; 
             display: flex; 
             align-items: center; 
-            gap: 5px; 
-            border: 0.5px solid rgba(255, 255, 255, 0.15); 
+            gap: 5px; /* 圆点和文字的间距 */
+            border: 0.5px solid rgba(255, 255, 255, 0.15); /* 极细描边质感 */
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); 
             letter-spacing: 0.5px; 
         }
@@ -148,6 +152,7 @@
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06); 
         }
         
+        /* 无货/售罄状态：灰色小圆点 */
         .stock-badge::before { 
             content: ''; 
             display: block; 
@@ -157,9 +162,11 @@
             background-color: #888; 
         }
         
+        /* 有货/现货状态背景 */
         .stock-badge.in-stock { background: rgba(30, 30, 30, 0.75); }
         :root.light-mode .stock-badge.in-stock { background: rgba(255, 255, 255, 0.95); }
         
+        /* 有货/现货状态：带微发光效果的绿色小圆点 */
         .stock-badge.in-stock::before { 
             background-color: #34C759; 
             box-shadow: 0 0 6px rgba(52, 199, 89, 0.6); 
@@ -176,7 +183,7 @@
         .action-group { display: flex; gap: 6px; align-items: center; }
         .edit-btn, .add-btn { border: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s, color 0.2s; }
         .edit-btn { background: var(--img-bg); color: var(--text-secondary); }
-        .add-btn { color: #FFF; background: var(--accent-color); } 
+        .add-btn { color: #FFF; background: var(--accent-color); box-shadow: 0 2px 8px var(--accent-shadow);} 
         .details-btn { background: var(--accent-bg); color: var(--accent-color); border: none; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
         @media (hover: hover) { .details-btn:hover { filter: brightness(1.1); } }
         .details-btn:active { transform: scale(0.92); opacity: 0.8;}
@@ -231,9 +238,9 @@
         .total-row span:last-child { font-size: 24px; font-weight: 800; color: var(--price-color); line-height: 1;}
         .total-row span:last-child::before { content: "¥ "; font-size: 14px; font-weight: 600; }
         
-        .checkout-btn { width: 100%; background: linear-gradient(90deg, #FF6B00, var(--accent-color)); color: #FFF; border-radius: 999px; border: none; padding: 14px 0; font-size: 16px; font-weight: 600; text-align: center; cursor: pointer; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s, opacity 0.2s; }
-        @media (hover: hover) { .checkout-btn:hover:not(:disabled) { transform: translateY(-1px); } }
-        .checkout-btn:active:not(:disabled) { transform: scale(0.96); opacity: 0.9;}
+        .checkout-btn { width: 100%; background: linear-gradient(90deg, #FF6B00, var(--accent-color)); color: #FFF; border-radius: 999px; border: none; padding: 14px 0; font-size: 16px; font-weight: 600; text-align: center; cursor: pointer; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s, opacity 0.2s; box-shadow: 0 4px 16px var(--accent-shadow); }
+        @media (hover: hover) { .checkout-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px var(--accent-shadow); } }
+        .checkout-btn:active:not(:disabled) { transform: scale(0.96); box-shadow: 0 2px 4px var(--accent-shadow); opacity: 0.9;}
 
         .delete-btn { width: 100%; background: transparent; color: var(--text-secondary); border-radius: 999px; border: 1px solid var(--divider); padding: 14px 0; font-size: 15px; font-weight: 500; text-align: center; margin-top: 12px; cursor: pointer; display: none; transition: all 0.2s; }
         @media (hover: hover) { .delete-btn:hover { background: rgba(255, 65, 66, 0.05); color: var(--accent-color); border-color: var(--accent-color);} }
@@ -340,15 +347,24 @@
             .cart-panel { width: 100%; border-left: none; }
         }
 
-        .card { background: linear-gradient(145deg, var(--card-color) 0%, var(--bg-color) 100%); box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05), 0 2px 8px rgba(0,0,0,0.04); }
+        /* ================= 极简机车风 & 大厂按钮 UI 升级包 ================= */
+        
+        /* 1. 卡片高级质感与光影 (保留原版) */
+        .card {
+            background: linear-gradient(145deg, var(--card-color) 0%, var(--bg-color) 100%);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05), 0 2px 8px rgba(0,0,0,0.04);
+        }
         :root:not(.light-mode) .card { border: 1px solid rgba(255, 255, 255, 0.08); }
+        /* 悬浮动画：排除了已售罄的卡片，售罄商品不再上浮 */
         @media (hover: hover) { .card:hover:not(.out-of-stock) { transform: translateY(-5px); box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1), 0 12px 24px var(--accent-shadow); } }
         .card-img { border-bottom: 0.5px solid var(--divider); }
 
+        /* 2. 价格数字仪表盘化 (保留原版) */
         .price-wrap { font-family: "SF Pro Display", "Impact", "Arial Black", sans-serif; font-style: italic; text-shadow: 1px 1px 0px rgba(0,0,0,0.1); }
         .price { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; }
         .price-symbol { font-size: 14px; font-style: normal; }
 
+        /* 3. 卡片丝滑呼吸感出场动画 (保留原版) */
         @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .card:not(.skeleton) { animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
         .card:nth-child(1) { animation-delay: 0.05s; }
@@ -360,65 +376,234 @@
         .card:nth-child(7) { animation-delay: 0.35s; }
         .card:nth-child(8) { animation-delay: 0.4s; }
 
-        button, .filter-btn, .fab-map-btn, .details-btn, .add-btn, .checkout-btn, .delete-btn { transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.3s ease, color 0.3s ease !important; }
+        /* 4. 全局大厂风格按钮：高对比度、呼吸感、毛玻璃 */
+        button, .filter-btn, .fab-map-btn, .details-btn, .add-btn, .checkout-btn, .delete-btn {
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.3s ease, box-shadow 0.3s ease, color 0.3s ease !important;
+        }
         button:active:not(:disabled), .filter-btn:active, .fab-map-btn:active { transform: scale(0.94) !important; opacity: 0.9; }
 
-        .checkout-btn { background: var(--text-primary) !important; color: var(--bg-color) !important; border-radius: 12px !important; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important; border: none !important; font-weight: 600 !important; letter-spacing: 0.5px; }
+        /* 结算/大操作按钮 (12px圆角 + 高级反色) */
+        .checkout-btn {
+            background: var(--text-primary) !important; color: var(--bg-color) !important;
+            border-radius: 12px !important; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+            border: none !important; font-weight: 600 !important; letter-spacing: 0.5px;
+        }
         :root:not(.light-mode) .checkout-btn { box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3) !important; }
         
-        #checkout-btn, #install-checkout-btn, #submit-btn, #query-orders-btn { background: var(--accent-color) !important; color: #FFF !important; }
+        /* 核心下单/提交按钮保留品牌红，更显眼 */
+        #checkout-btn, #install-checkout-btn, #submit-btn, #query-orders-btn {
+            background: var(--accent-color) !important; color: #FFF !important; box-shadow: 0 6px 20px var(--accent-shadow) !important;
+        }
 
-        .filter-btn { border-radius: 999px !important; background: var(--img-bg) !important; color: var(--text-secondary) !important; border: 1px solid transparent !important; padding: 7px 16px !important; font-size: 14px !important; margin: 0 2px; }
-        .filter-btn.active { background: var(--text-primary) !important; color: var(--bg-color) !important; box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important; transform: none !important; }
+        /* 分类标签 (黑白极简风格) */
+        .filter-btn {
+            border-radius: 999px !important; background: var(--img-bg) !important; color: var(--text-secondary) !important;
+            border: 1px solid transparent !important; padding: 7px 16px !important; font-size: 14px !important; margin: 0 2px;
+        }
+        .filter-btn.active {
+            background: var(--text-primary) !important; color: var(--bg-color) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important; transform: none !important;
+        }
 
+        /* 卡片内部操作按钮 */
         .add-btn { background: var(--text-primary) !important; color: var(--bg-color) !important; box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important; border: none !important; }
         .details-btn { background: var(--img-bg) !important; color: var(--text-primary) !important; border: 1px solid var(--divider) !important; font-weight: 500 !important; box-shadow: none !important; }
         
+        /* 危险按钮 */
         .delete-btn { background: rgba(255, 65, 66, 0.1) !important; color: var(--accent-color) !important; border: none !important; border-radius: 12px !important; font-weight: 600 !important; }
 
-        .fab-map-btn { background: rgba(255, 255, 255, 0.85) !important; color: #111 !important; backdrop-filter: saturate(180%) blur(20px) !important; -webkit-backdrop-filter: saturate(180%) blur(20px) !important; border: 0.5px solid rgba(0,0,0,0.08) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important; }
-        :root:not(.light-mode) .fab-map-btn { background: rgba(30, 30, 30, 0.85) !important; color: #FFF !important; border: 0.5px solid rgba(255,255,255,0.1) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important; }
+        /* 右下角悬浮按钮 (iOS毛玻璃) */
+        .fab-map-btn {
+            background: rgba(255, 255, 255, 0.85) !important; color: #111 !important;
+            backdrop-filter: saturate(180%) blur(20px) !important; -webkit-backdrop-filter: saturate(180%) blur(20px) !important;
+            border: 0.5px solid rgba(0,0,0,0.08) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+        }
+        :root:not(.light-mode) .fab-map-btn {
+            background: rgba(30, 30, 30, 0.85) !important; color: #FFF !important;
+            border: 0.5px solid rgba(255,255,255,0.1) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+        }
 
+        /* 5. 修复滑动容器四周边角被切割问题 */
         .filter-scroll { padding-top: 6px !important; padding-bottom: 14px !important; padding-left: 4px !important; align-items: center; }
         @media (max-width: 768px) {
             .filter-bar { padding-bottom: 0px !important; }
             .filter-scroll { margin-left: -4px; padding-right: 20px !important; }
         }
 
-        .card.out-of-stock { position: relative; filter: grayscale(100%) !important; opacity: 0.8 !important; }
-        .card.out-of-stock::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.15); z-index: 5; border-radius: inherit; pointer-events: none; }
-        :root.light-mode .card.out-of-stock::after { background: rgba(255, 255, 255, 0.5); }
+        /* 6. 已售罄商品遮罩样式 (大厂精美风格) */
+        .card.out-of-stock {
+            position: relative;
+            filter: grayscale(100%) !important; /* 彻底去色，降低视觉层级 */
+            opacity: 0.8 !important; /* 覆盖原本行内样式的0.6，调高一点防止太黑 */
+        }
+        
+        /* 增加全局半透明暗层罩住商品 */
+        .card.out-of-stock::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.15); /* 夜间模式微弱黑罩 */
+            z-index: 5;
+            border-radius: inherit;
+            pointer-events: none; /* 让点击事件能穿透，方便查看详情 */
+        }
+        :root.light-mode .card.out-of-stock::after {
+            background: rgba(255, 255, 255, 0.5); /* 日间模式白雾罩 */
+        }
 
-        .card.out-of-stock::before { content: '已售罄'; position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: rgba(30, 30, 30, 0.85); backdrop-filter: saturate(180%) blur(12px); -webkit-backdrop-filter: saturate(180%) blur(12px); color: #FFF; padding: 8px 18px; border-radius: 99px; font-size: 14px; font-weight: 800; letter-spacing: 2px; z-index: 6; border: 0.5px solid rgba(255,255,255,0.15); pointer-events: none; }
-        :root.light-mode .card.out-of-stock::before { background: rgba(255, 255, 255, 0.9); color: #111; border: 0.5px solid rgba(0,0,0,0.08); }
+        /* 图片中央的毛玻璃“已售罄”印章 */
+        .card.out-of-stock::before {
+            content: '已售罄';
+            position: absolute;
+            top: 40%; /* 稍微偏上一点，在商品图的中央 */
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 30, 30, 0.85); /* 深色毛玻璃背景 */
+            backdrop-filter: saturate(180%) blur(12px);
+            -webkit-backdrop-filter: saturate(180%) blur(12px);
+            color: #FFF;
+            padding: 8px 18px;
+            border-radius: 99px; /* 胶囊形 */
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            z-index: 6;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            border: 0.5px solid rgba(255,255,255,0.15);
+            pointer-events: none;
+        }
+        :root.light-mode .card.out-of-stock::before {
+            background: rgba(255, 255, 255, 0.9);
+            color: #111;
+            border: 0.5px solid rgba(0,0,0,0.08);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }
+        /* ================= 大厂质感 UI 升级包 (全局按钮 & 悬浮窗) ================= */
 
-        .checkout-btn { background: var(--accent-color); color: #FFFFFF; border: none; border-radius: 999px; font-weight: 600; letter-spacing: 0.5px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
-        @media (hover: hover) { .checkout-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.05); } }
-        .checkout-btn:active:not(:disabled) { transform: scale(0.96); filter: brightness(0.95); opacity: 1; }
+/* 1. 全局主操作按钮 (结账等) - 纯粹质感与柔和弥散阴影 */
+.checkout-btn {
+    background: var(--accent-color);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    box-shadow: 0 8px 20px rgba(255, 65, 66, 0.25);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+@media (hover: hover) { 
+    .checkout-btn:hover:not(:disabled) { 
+        transform: translateY(-2px); 
+        box-shadow: 0 12px 24px rgba(255, 65, 66, 0.35); 
+        filter: brightness(1.05);
+    } 
+}
+.checkout-btn:active:not(:disabled) { 
+    transform: scale(0.96); 
+    box-shadow: 0 4px 10px rgba(255, 65, 66, 0.15); 
+    filter: brightness(0.95);
+    opacity: 1;
+}
 
-        .add-btn { background: var(--accent-color); color: #FFF; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
-        .add-btn:active:not(:disabled) { transform: scale(0.85); }
+/* 2. 购物车小加号 - 饱满圆润 */
+.add-btn {
+    background: var(--accent-color);
+    color: #FFF;
+    box-shadow: 0 4px 12px rgba(255, 65, 66, 0.3);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.add-btn:active:not(:disabled) { 
+    transform: scale(0.85); 
+    box-shadow: 0 2px 6px rgba(255, 65, 66, 0.2); 
+}
 
-        .details-btn { background: var(--accent-bg); color: var(--accent-color); font-weight: 600; padding: 6px 16px; border-radius: 999px; transition: all 0.2s ease; }
-        .details-btn:active { transform: scale(0.92); background: rgba(255, 65, 66, 0.2); }
+/* 3. 次级动作按钮 (详情) - 浅色流态背景 */
+.details-btn {
+    background: var(--accent-bg);
+    color: var(--accent-color);
+    font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 999px;
+    transition: all 0.2s ease;
+}
+.details-btn:active { 
+    transform: scale(0.92); 
+    background: rgba(255, 65, 66, 0.2); 
+}
 
-        .delete-btn { background: transparent; color: #FF3B30; border: 1px solid rgba(255, 59, 48, 0.3); font-weight: 500; }
-        @media (hover: hover) { .delete-btn:hover { background: rgba(255, 59, 48, 0.05); border-color: #FF3B30; color: #FF3B30;} }
-        .delete-btn:active { transform: scale(0.96); background: rgba(255, 59, 48, 0.1); border-color: #FF3B30; }
+/* 4. 危险/删除按钮 - 极简描边风 */
+.delete-btn {
+    background: transparent;
+    color: #FF3B30; 
+    border: 1px solid rgba(255, 59, 48, 0.3);
+    font-weight: 500;
+}
+@media (hover: hover) { 
+    .delete-btn:hover { background: rgba(255, 59, 48, 0.05); border-color: #FF3B30; color: #FF3B30;} 
+}
+.delete-btn:active { 
+    transform: scale(0.96); 
+    background: rgba(255, 59, 48, 0.1); 
+    border-color: #FF3B30; 
+}
 
-        .filter-btn { border-radius: 999px; padding: 6px 16px; font-size: 14px; font-weight: 500; background: var(--img-bg); color: var(--text-secondary); border: 1px solid transparent; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); box-shadow: none; }
-        .filter-btn.active { font-weight: 600; transform: translateY(0); }
-        :root.light-mode .filter-btn.active { background: #1A1A1A; color: #FFFFFF; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
-        :root:not(.light-mode) .filter-btn.active { background: #FFFFFF; color: #121212; box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1); }
+/* 5. 分类筛选按钮 - 黑白高对比度 */
+.filter-btn {
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    background: var(--img-bg);
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: none;
+}
+.filter-btn.active {
+    font-weight: 600;
+    transform: translateY(0);
+}
+:root.light-mode .filter-btn.active { background: #1A1A1A; color: #FFFFFF; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+:root:not(.light-mode) .filter-btn.active { background: #FFFFFF; color: #121212; box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1); }
 
-        .fab-map-btn { padding: 14px 22px !important; border-radius: 999px !important; font-size: 15px !important; font-weight: 800 !important; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px !important; border: none !important; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
-        @media (hover: hover) { .fab-map-btn:hover { transform: translateY(-2px); filter: brightness(1.05); } }
-        .fab-map-btn:active { transform: scale(0.96); filter: brightness(0.95); }
+/* 6. 悬浮按钮高亮升级 (自带件装车 & 门店位置) */
+.fab-map-btn {
+    padding: 14px 22px !important;
+    border-radius: 999px !important;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px !important;
+    border: none !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+@media (hover: hover) { 
+    .fab-map-btn:hover { transform: translateY(-2px); filter: brightness(1.05); } 
+}
+.fab-map-btn:active { transform: scale(0.96); filter: brightness(0.95); }
 
-        .install-fab { bottom: calc(84px + env(safe-area-inset-bottom)) !important; background: var(--text-primary) !important; color: var(--bg-color) !important; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2) !important; }
-        :root:not(.light-mode) .install-fab { box-shadow: 0 12px 28px rgba(255, 255, 255, 0.15) !important; }
+/* 自带件装车 - 高反差极简色 */
+.install-fab {
+    bottom: calc(84px + env(safe-area-inset-bottom)) !important; 
+    background: var(--text-primary) !important; 
+    color: var(--bg-color) !important;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2) !important;
+}
+:root:not(.light-mode) .install-fab {
+    box-shadow: 0 12px 28px rgba(255, 255, 255, 0.15) !important;
+}
 
-        .location-fab { bottom: calc(24px + env(safe-area-inset-bottom)) !important; background: var(--accent-color) !important; color: #FFFFFF !important; }
+/* 门店位置 - 品牌主色调 */
+.location-fab {
+    bottom: calc(24px + env(safe-area-inset-bottom)) !important;
+    background: var(--accent-color) !important; 
+    color: #FFFFFF !important;
+    box-shadow: 0 12px 28px var(--accent-shadow) !important;
+}
     </style>
 </head>
 <body>
@@ -431,7 +616,7 @@
     <svg class="header-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1500" preserveAspectRatio="xMidYMid meet">
         <g transform="translate(0,1500) scale(0.1,-0.1)" fill="#8B1C31" stroke="none">
             <path d="M2345 14710 c-311 -39 -316 -40 -510 -97 -265 -79 -570 -246 -800 -439 -196 -164 -416 -408 -491 -544 -10 -19 -24 -42 -31 -50 -18 -23 -133 -247 -133 -259 0 -6 -12 -35 -26 -64 -52 -106 -111 -312 -141 -492 -17 -105 -18 -336 -18 -5310 0 -4223 2 -5212 13 -5265 7 -36 17 -91 22 -122 4 -31 13 -72 19 -90 60 -186 86 -259 107 -307 58 -127 119 -249 146 -289 15 -24 28 -46 28 -49 0 -6 126 -188 151 -218 154 -183 249 -278 386 -387 108 -86 289 -205 373 -247 25 -12 52 -26 60 -31 16 -11 102 -49 165 -75 43 -18 216 -76 280 -95 49 -15 87 -22 294 -54 l163 -26 5157 3 c3901 2 5166 5 5196 14 22 7 83 19 135 28 89 16 200 45 245 64 11 4 45 16 75 25 111 35 393 167 450 210 8 6 31 20 50 30 97 54 296 217 426 349 237 241 401 488 522 787 51 123 103 320 133 495 12 67 14 919 14 5275 0 4779 -1 5202 -16 5285 -21 112 -71 302 -99 375 -11 30 -30 82 -42 115 -27 76 -97 214 -173 337 -175 285 -424 542 -700 720 -124 80 -148 94 -250 145 -282 142 -478 200 -830 243 -158 20 -236 20 -5225 19 -2786 -1 -5092 -5 -5125 -9z m10390 -817 c92 -22 175 -46 210 -62 11 -5 40 -16 65 -26 230 -87 463 -257 615 -446 158 -196 284 -474 318 -704 15 -104 22 -10185 7 -10320 -12 -106 -31 -195 -55 -257 -8 -21 -22 -57 -31 -80 -116 -302 -355 -586 -629 -750 -118 -70 -301 -146 -445 -183 -177 -47 43 -45 -5305 -45 -5335 0 -5122 -2 -5295 44 -101 26 -184 58 -300 113 -152 73 -278 158 -391 265 -90 85 -216 244 -263 333 -15 28 -31 57 -36 65 -12 19 -73 155 -88 195 -11 30 -25 86 -58 225 -17 71 -18 322 -16 5199 1 4709 3 5131 18 5200 43 201 71 284 148 442 128 261 353 494 606 627 36 19 70 38 75 42 10 7 157 66 225 90 50 17 172 40 265 49 44 5 2373 7 5175 6 l5095 -1 90 -21z"/>
-            <path d="M7375 10821 c-60 -9 -206 -58 -330 -110 -11 -5 -42 -16 -70 -26 -52 -17 -128 -47 -277 -109 -47 -20 -90 -36 -93 -36 -8 0 -274 -103 -320 -124 -16 -8 -68 -28 -115 -46 -83 -31 -120 -46 -188 -76 -18 -8 -39 -14 -47 -14 -7 0 -26 -7 -42 -15 -24 -12 -186 -78 -333 -135 -48 -19 -312 -125 -345 -139 -11 -5 -78 -31 -150 -59 -71 -28 -193 -76 -270 -107 -77 -31 -156 -63 -175 -70 -19 -7 -87 -34 -150 -60 -63 -26 -146 -60 -185 -75 -116 -47 -368 -151 -400 -165 -24 -11 -120 -51 -300 -124 -25 -11 -173 -76 -240 -107 -27 -12 -74 -32 -104 -44 -30 -12 -92 -39 -138 -61 -46 -21 -88 -39 -92 -39 -21 0 -91 -93 -108 -142 -17 -50 -18 -134 -21 -1478 -2 -976 1 -1452 8 -1510 13 -101 49 -164 121 -210 42 -28 235 -111 339 -146 25 -9 63 -24 85 -34 22 -10 58 -25 80 -33 22 -8 78 -31 125 -50 47 -19 105 -42 130 -51 25 -8 104 -38 175 -67 72 -28 164 -63 205 -79 105 -39 261 -101 284 -112 11 -6 31 -14 45 -18 57 -18 378 -147 413 -166 14 -8 33 -14 42 -14 14 0 67 -20 110 -42 21 -11 216 -87 327 -128 42 -15 96 -37 120 -48 48 -22 198 -81 299 -118 36 -13 73 -28 83 -34 9 -6 43 -20 75 -31 31 -11 91 -34 132 -51 41 -16 91 -36 110 -43 116 -44 282 -110 325 -130 28 -13 64 -27 80 -31 17 -4 57 -19 90 -34 79 -37 262 -110 300 -120 17 -5 77 -27 135 -50 251 -100 267 -104 415 -104 116 1 137 4 200 28 39 15 102 38 141 -51 40 13 80 28 90 33 11 6 37 17 59 25 22 8 78 31 125 50 47 19 106 42 132 51 26 9 56 20 65 25 16 9 206 86 323 131 25 10 108 43 185 75 429 175 537 219 600 242 39 13 93 35 120 48 28 13 61 26 75 30 14 4 48 17 75 30 28 12 68 29 90 37 41 16 111 44 300 121 61 25 137 55 170 67 33 12 64 25 70 29 5 4 33 16 60 26 49 17 92 34 150 59 17 8 48 20 70 29 22 8 73 29 114 46 40 17 77 31 82 31 5 0 37 13 71 28 35 16 81 36 103 45 38 15 187 74 345 139 41 16 121 50 178 74 57 24 108 44 113 44 10 0 44 13 114 45 17 8 41 17 55 20 14 4 68 28 120 53 74 35 110 60 161 111 174 174 220 440 102 588 -67 84 -170 82 -349 -6 -23 -11 -59 -27 -80 -34 -49 -18 -219 -85 -259 -102 -16 -7 -48 -20 -70 -28 -22 -8 -74 -29 -115 -46 -41 -17 -104 -42 -140 -55 -105 -38 -250 -97 -318 -127 -34 -16 -66 -29 -72 -29 -10 0 -65 -23 -110 -45 -14 -7 -52 -22 -85 -33 -33 -11 -94 -35 -135 -52 -41 -17 -84 -35 -95 -39 -11 -5 -40 -17 -65 -29 -25 -11 -67 -27 -94 -36 -27 -9 -72 -27 -100 -40 -55 -25 -95 -41 -196 -79 -36 -14 -112 -44 -170 -67 -58 -23 -125 -50 -150 -60 -212 -83 -314 -125 -342 -140 -10 -6 -23 -10 -29 -10 -6 0 -27 -7 -47 -16 -21 -8 -50 -21 -67 -28 -16 -8 -48 -20 -70 -29 -22 -8 -74 -29 -115 -46 -41 -16 -151 -60 -245 -96 -93 -37 -192 -77 -220 -89 -27 -13 -75 -33 -105 -45 -30 -12 -64 -26 -75 -30 -11 -5 -40 -16 -65 -26 -25 -10 -73 -30 -107 -46 -35 -16 -67 -29 -72 -29 -10 0 -54 -18 -116 -46 -200 -92 -389 -124 -514 -88 -95 28 -234 74 -266 89 -16 7 -48 20 -70 28 -22 8 -74 28 -115 45 -41 17 -147 58 -235 91 -88 34 -168 66 -178 71 -9 6 -39 17 -65 26 -26 9 -85 32 -132 51 -47 19 -103 42 -125 50 -22 8 -53 21 -70 28 -16 7 -48 19 -70 28 -22 8 -85 33 -140 56 -55 22 -143 56 -195 76 -52 20 -140 54 -195 75 -55 22 -118 45 -140 53 -55 20 -293 115 -330 132 -16 7 -102 41 -190 75 -223 86 -315 121 -350 135 -16 7 -68 27 -115 45 -47 18 -98 38 -115 45 -16 7 -48 20 -70 28 -135 50 -276 115 -316 145 -65 48 -109 125 -119 209 -10 81 -4 154 18 208 21 54 37 72 101 113 49 31 60 34 123 34 38 -1 75 -5 81 -10 7 -5 48 -22 92 -37 44 -15 100 -37 125 -49 25 -12 72 -30 105 -40 33 -11 65 -23 71 -27 6 -5 46 -22 90 -37 43 -16 135 -52 204 -80 106 -42 333 -131 485 -189 22 -9 54 -21 70 -28 41 -18 226 -89 300 -115 33 -12 71 -27 85 -34 14 -8 43 -19 65 -26 22 -7 78 -28 125 -47 47 -19 101 -41 120 -48 19 -8 64 -25 100 -39 36 -13 142 -54 235 -91 94 -36 206 -80 250 -97 77 -30 95 -37 177 -72 20 -9 40 -16 45 -16 8 0 182 -65 318 -120 107 -43 249 -81 323 -87 66 -5 93 -1 202 32 30 9 72 20 93 26 21 5 45 13 55 18 9 5 35 16 57 24 22 8 78 31 125 50 47 19 108 42 135 51 49 17 190 70 335 128 41 17 91 36 110 43 19 7 68 27 109 44 40 17 78 31 83 31 6 0 24 6 41 14 18 8 86 35 152 61 66 26 134 53 150 60 17 7 86 34 155 60 69 26 157 60 195 75 39 16 97 38 130 50 33 12 64 25 70 29 5 5 39 19 75 31 110 39 140 50 158 59 29 14 202 82 277 108 65 22 100 36 288 113 39 16 100 38 134 50 35 11 86 31 115 44 29 13 109 45 178 71 69 26 157 59 195 75 75 29 177 68 315 120 47 17 96 37 110 43 42 18 92 37 169 62 41 14 79 29 85 33 6 5 44 19 84 31 73 24 173 81 203 117 31 38 39 99 39 305 0 180 -3 209 -20 247 -14 31 -29 47 -54 57 -51 21 -71 19 -166 -21 -47 -19 -112 -46 -145 -58 -95 -37 -317 -126 -350 -140 -16 -8 -48 -20 -70 -29 -61 -23 -148 -57 -170 -66 -28 -12 -169 -68 -240 -95 -157 -61 -253 -99 -280 -111 -50 -23 -93 -40 -260 -105 -194 -75 -379 -148 -420 -165 -16 -7 -57 -23 -90 -35 -33 -12 -64 -25 -70 -29 -5 -4 -32 -15 -60 -25 -27 -10 -81 -30 -120 -45 -210 -84 -267 -106 -335 -131 -41 -14 -84 -32 -95 -38 -11 -6 -92 -39 -180 -73 -88 -33 -194 -74 -235 -91 -41 -17 -93 -37 -115 -45 -22 -9 -53 -21 -70 -28 -49 -21 -108 -43 -135 -51 -14 -3 -47 -17 -75 -29 -27 -12 -75 -31 -105 -41 -30 -10 -59 -21 -65 -25 -5 -4 -53 -23 -105 -43 -52 -20 -108 -43 -125 -51 -16 -7 -57 -23 -90 -36 -33 -12 -82 -30 -110 -41 -147 -58 -350 -64 -475 -13 -19 7 -75 28 -125 45 -49 17 -124 45 -165 62 -41 16 -91 36 -110 43 -19 8 -75 29 -125 49 -49 19 -119 45 -155 59 -36 13 -108 41 -160 62 -171 67 -184 72 -285 110 -55 20 -136 51 -180 67 -44 17 -98 37 -120 45 -22 8 -53 21 -70 28 -16 7 -48 19 -70 28 -22 8 -65 25 -95 37 -30 13 -91 35 -135 51 -44 15 -102 37 -130 49 -27 12 -77 30 -110 41 -33 11 -68 24 -78 29 -9 6 -43 20 -75 31 -31 11 -111 41 -177 66 -143 54 -265 100 -320 121 -22 8 -53 20 -70 27 -16 7 -49 20 -72 29 -24 9 -62 23 -85 32 -66 25 -120 45 -158 59 -19 7 -54 20 -77 29 -24 9 -60 22 -80 30 -109 40 -218 92 -241 116 -15 15 -35 49 -45 76 -15 44 -17 97 -17 529 0 424 2 485 17 525 24 64 48 96 106 138 62 45 88 57 237 118 63 25 151 61 195 78 44 18 96 39 115 46 19 7 63 26 98 41 34 16 67 29 72 29 5 0 38 13 72 28 35 16 83 37 108 46 25 10 59 24 75 31 38 17 89 38 140 58 22 8 79 31 127 51 47 20 89 36 93 36 3 0 30 11 58 23 29 13 70 31 92 39 22 9 78 32 125 51 47 19 103 40 125 47 22 7 51 19 65 26 14 7 67 29 118 49 51 19 101 39 110 44 9 5 35 16 57 24 47 18 142 55 170 66 11 5 40 16 65 26 25 10 73 30 107 46 35 16 67 29 72 29 6 0 27 7 48 16 21 9 52 22 68 29 17 7 47 20 68 29 21 9 42 16 47 16 6 0 34 12 63 26 28 14 72 32 97 41 25 8 81 30 125 48 44 18 132 54 195 80 63 26 147 60 185 76 96 40 198 54 283 40 64 -11 96 -21 187 -62 22 -9 90 -39 150 -65 61 -26 147 -64 193 -85 45 -22 85 -39 87 -39 3 0 33 -13 67 -28 205 -94 269 -122 272 -122 3 0 48 -20 100 -45 53 -25 98 -45 100 -45 3 0 47 -20 98 -44 51 -24 98 -45 103 -47 39 -15 118 -76 135 -103 73 -119 -22 -194 -455 -364 -22 -8 -68 -28 -103 -44 -34 -15 -67 -28 -72 -28 -5 0 -38 -13 -72 -29 -35 -16 -94 -41 -133 -56 -38 -15 -108 -43 -155 -62 -121 -50 -229 -93 -275 -110 -22 -8 -49 -20 -60 -26 -40 -21 -162 -47 -223 -47 -61 0 -186 22 -227 40 -72 32 -119 50 -126 50 -5 0 -37 13 -72 29 -311 147 -519 241 -531 241 -7 0 -30 7 -49 15 -49 20 -337 21 -399 1 -24 -8 -70 -22 -103 -31 -125 -36 -222 -72 -360 -134 -22 -10 -65 -29 -95 -41 -30 -13 -60 -27 -67 -32 -6 -5 -40 -24 -75 -42 -55 -28 -205 -113 -263 -149 -42 -26 -212 -157 -251 -194 -139 -129 -199 -298 -169 -472 27 -152 96 -258 215 -325 58 -33 160 -76 430 -182 91 -35 179 -71 195 -78 27 -13 166 -66 270 -103 70 -25 318 -124 361 -144 22 -10 44 -19 48 -19 10 0 136 -48 159 -61 9 -5 39 -16 65 -25 26 -9 85 -32 132 -51 126 -51 230 -93 273 -109 61 -23 120 -46 152 -59 17 -7 53 -20 80 -30 28 -9 64 -23 80 -30 115 -48 238 -76 344 -77 98 -1 149 9 271 54 30 11 96 35 145 53 101 36 237 89 430 165 72 28 155 60 185 71 30 11 89 34 130 51 41 16 93 37 115 45 22 8 54 21 70 29 31 14 151 60 196 74 14 4 34 12 45 18 10 5 37 17 59 25 60 23 148 57 170 67 11 5 46 18 77 29 32 11 66 25 75 30 10 5 36 16 58 24 22 9 90 36 151 61 62 25 117 46 124 46 6 0 24 6 38 14 15 8 65 29 112 46 47 17 99 38 115 45 17 8 84 35 150 60 179 69 184 70 270 105 44 18 98 39 120 47 22 8 54 21 70 29 17 8 59 25 95 38 87 31 248 94 285 111 17 7 55 22 85 34 30 11 120 46 200 77 80 30 181 69 225 86 44 16 116 45 160 63 44 18 98 39 120 46 67 23 151 76 181 116 l29 38 0 245 c0 235 -1 246 -22 280 -32 51 -75 80 -120 80 -25 0 -86 -20 -168 -56 -72 -31 -164 -68 -205 -84 -136 -50 -264 -102 -327 -131 -35 -16 -67 -29 -73 -29 -5 0 -42 -15 -82 -33 -40 -19 -89 -39 -108 -46 -43 -16 -138 -54 -287 -115 -62 -25 -161 -66 -220 -90 -60 -24 -146 -60 -193 -79 -47 -19 -106 -42 -132 -51 -26 -9 -56 -20 -65 -25 -18 -10 -54 -25 -133 -56 -25 -9 -56 -23 -70 -30 -14 -7 -43 -18 -65 -25 -22 -7 -78 -28 -125 -47 -47 -19 -103 -42 -125 -50 -22 -9 -53 -21 -70 -28 -53 -23 -177 -72 -265 -105 -96 -37 -130 -50 -180 -72 -46 -21 -254 -106 -305 -125 -22 -8 -51 -21 -65 -28 -14 -7 -52 -22 -85 -33 -33 -11 -78 -30 -100 -41 -22 -10 -74 -31 -114 -45 -40 -14 -79 -29 -85 -34 -6 -5 -33 -17 -61 -27 -27 -9 -63 -23 -80 -30 -30 -12 -78 -31 -157 -61 -24 -9 -67 -28 -97 -41 -30 -14 -66 -29 -80 -34 -14 -4 -51 -17 -81 -29 -107 -42 -176 -60 -233 -60 -63 0 -187 25 -227 45 -14 7 -47 21 -75 30 -27 9 -81 29 -120 -45 -38 15 -108 -42 -155 -60 -47 17 -103 38 -125 -47 -22 8 -58 22 -80 -30 -22 8 -49 20 -59 25 -11 6 -31 14 -45 19 -14 4 -64 22 -111 40 -47 17 -119 44 -160 59 -42 15 -105 39 -140 53 -36 13 -121 46 -190 72 -69 26 -156 59 -195 75 -38 15 -108 42 -155 60 -111 42 -186 79 -206 101 -9 10 -18 37 -21 61 -4 36 0 50 26 85 17 23 49 52 71 63 22 11 60 33 85 49 94 60 368 179 434 189 80 12 185 -5 263 -42 30 -14 58 -26 61 -26 4 0 50 -20 103 -45 52 -25 97 -45 99 -45 2 0 47 -20 99 -45 53 -25 102 -45 109 -45 7 0 17 -4 22 -9 10 -9 304 -135 375 -161 19 -7 49 -18 65 -25 124 -52 219 -70 360 -69 124 0 230 19 328 56 29 11 81 30 117 43 36 13 88 33 115 43 28 11 77 30 110 42 33 12 112 42 175 67 63 24 151 58 195 75 106 40 176 67 200 78 11 5 48 18 83 29 34 12 70 26 80 31 20 11 299 120 308 120 3 0 42 15 87 34 45 19 120 48 167 66 47 18 99 38 115 45 49 20 105 42 195 75 47 18 119 46 160 62 41 17 91 36 110 43 19 7 69 26 110 43 41 16 147 58 235 91 88 34 177 69 198 77 20 7 55 21 77 29 143 54 193 82 220 128 24 38 25 63 5 110 -27 65 -82 98 -325 195 -41 16 -91 36 -110 42 -19 7 -53 21 -75 31 -22 10 -71 30 -110 44 -38 15 -88 35 -110 45 -22 10 -58 25 -80 33 -22 9 -75 29 -119 46 -43 17 -83 31 -87 31 -5 0 -37 13 -72 29 -34 16 -82 36 -107 46 -25 10 -54 21 -65 26 -100 41 -323 131 -390 157 -22 8 -62 25 -90 37 -27 13 -61 26 -75 30 -14 4 -54 19 -90 35 -36 15 -85 35 -110 45 -25 9 -58 23 -75 30 -32 14 -179 72 -285 113 -36 13 -74 28 -85 33 -11 4 -45 18 -75 30 -30 12 -68 27 -85 34 -16 7 -52 21 -80 31 -27 10 -61 24 -75 31 -14 7 -30 13 -37 13 -6 0 -47 16 -90 34 -110 49 -220 93 -348 138 -97 34 -123 39 -220 43 -60 2 -132 0 -160 -4z"/>
+            <path d="M7375 10821 c-60 -9 -206 -58 -330 -110 -11 -5 -42 -16 -70 -26 -52 -17 -128 -47 -277 -109 -47 -20 -90 -36 -93 -36 -8 0 -274 -103 -320 -124 -16 -8 -68 -28 -115 -46 -83 -31 -120 -46 -188 -76 -18 -8 -39 -14 -47 -14 -7 0 -26 -7 -42 -15 -24 -12 -186 -78 -333 -135 -48 -19 -312 -125 -345 -139 -11 -5 -78 -31 -150 -59 -71 -28 -193 -76 -270 -107 -77 -31 -156 -63 -175 -70 -19 -7 -87 -34 -150 -60 -63 -26 -146 -60 -185 -75 -116 -47 -368 -151 -400 -165 -24 -11 -120 -51 -300 -124 -25 -11 -173 -76 -240 -107 -27 -12 -74 -32 -104 -44 -30 -12 -92 -39 -138 -61 -46 -21 -88 -39 -92 -39 -21 0 -91 -93 -108 -142 -17 -50 -18 -134 -21 -1478 -2 -976 1 -1452 8 -1510 13 -101 49 -164 121 -210 42 -28 235 -111 339 -146 25 -9 63 -24 85 -34 22 -10 58 -25 80 -33 22 -8 78 -31 125 -50 47 -19 105 -42 130 -51 25 -8 104 -38 175 -67 72 -28 164 -63 205 -79 105 -39 261 -101 284 -112 11 -6 31 -14 45 -18 57 -18 378 -147 413 -166 14 -8 33 -14 42 -14 14 0 67 -20 110 -42 21 -11 216 -87 327 -128 42 -15 96 -37 120 -48 48 -22 198 -81 299 -118 36 -13 73 -28 83 -34 9 -6 43 -20 75 -31 31 -11 91 -34 132 -51 41 -16 91 -36 110 -43 116 -44 282 -110 325 -130 28 -13 64 -27 80 -31 17 -4 57 -19 90 -34 79 -37 262 -110 300 -120 17 -5 77 -27 135 -50 251 -100 267 -104 415 -104 116 1 137 4 200 28 39 15 102 38 141 -51 40 13 80 28 90 33 11 6 37 17 59 25 22 8 78 31 125 50 47 19 106 42 132 51 26 9 56 20 65 25 16 9 206 86 323 131 25 10 108 43 185 75 429 175 537 219 600 242 39 13 93 35 120 48 28 13 61 26 75 30 14 4 48 17 75 30 28 12 68 29 90 37 41 16 111 44 300 121 61 25 137 55 170 67 33 12 64 25 70 29 5 4 33 16 60 26 49 17 92 34 150 59 17 8 48 20 70 29 22 8 73 29 114 46 40 17 77 31 82 31 5 0 37 13 71 28 35 16 81 36 103 45 38 15 187 74 345 139 41 16 121 50 178 74 57 24 108 44 113 44 10 0 44 13 114 45 17 8 41 17 55 20 14 4 68 28 120 53 74 35 110 60 161 111 174 174 220 440 102 588 -67 84 -170 82 -349 -6 -23 -11 -59 -27 -80 -34 -49 -18 -219 -85 -259 -102 -16 -7 -48 -20 -70 -28 -22 -8 -74 -29 -115 -46 -41 -17 -104 -42 -140 -55 -105 -38 -250 -97 -318 -127 -34 -16 -66 -29 -72 -29 -10 0 -65 -23 -110 -45 -14 -7 -52 -22 -85 -33 -33 -11 -94 -35 -135 -52 -41 -17 -84 -35 -95 -39 -11 -5 -40 -17 -65 -29 -25 -11 -67 -27 -94 -36 -27 -9 -72 -27 -100 -40 -55 -25 -95 -41 -196 -79 -36 -14 -112 -44 -170 -67 -58 -23 -125 -50 -150 -60 -212 -83 -314 -125 -342 -140 -10 -6 -23 -10 -29 -10 -6 0 -27 -7 -47 -16 -21 -8 -50 -21 -67 -28 -16 -8 -48 -20 -70 -29 -22 -8 -74 -29 -115 -46 -41 -16 -151 -60 -245 -96 -93 -37 -192 -77 -220 -89 -27 -13 -75 -33 -105 -45 -30 -12 -64 -26 -75 -30 -11 -5 -40 -16 -65 -26 -25 -10 -73 -30 -107 -46 -35 -16 -67 -29 -72 -29 -10 0 -54 -18 -116 -46 -200 -92 -389 -124 -514 -88 -95 28 -234 74 -266 89 -16 7 -48 20 -70 28 -22 8 -74 28 -115 45 -41 17 -147 58 -235 91 -88 34 -168 66 -178 71 -9 6 -39 17 -65 26 -26 9 -85 32 -132 51 -47 19 -103 42 -125 50 -22 8 -53 21 -70 28 -16 7 -48 19 -70 28 -22 8 -85 33 -140 56 -55 22 -143 56 -195 76 -52 20 -140 54 -195 75 -55 22 -118 45 -140 53 -55 20 -293 115 -330 132 -16 7 -102 41 -190 75 -223 86 -315 121 -350 135 -16 7 -68 27 -115 45 -47 18 -98 38 -115 45 -16 7 -48 20 -70 28 -135 50 -276 115 -316 145 -65 48 -109 125 -119 209 -10 81 -4 154 18 208 21 54 37 72 101 113 49 31 60 34 123 34 38 -1 75 -5 81 -10 7 -5 48 -22 92 -37 44 -15 100 -37 125 -49 25 -12 72 -30 105 -40 33 -11 65 -23 71 -27 6 -5 46 -22 90 -37 43 -16 135 -52 204 -80 106 -42 333 -131 485 -189 22 -9 54 -21 70 -28 41 -18 226 -89 300 -115 33 -12 71 -27 85 -34 14 -8 43 -19 65 -26 22 -7 78 -28 125 -47 47 -19 101 -41 120 -48 19 -8 64 -25 100 -39 36 -13 142 -54 235 -91 94 -36 206 -80 250 -97 77 -30 95 -37 177 -72 20 -9 40 -16 45 -16 8 0 182 -65 318 -120 107 -43 249 -81 323 -87 66 -5 93 -1 202 32 30 9 72 20 93 26 21 5 45 13 55 18 9 5 35 16 57 24 22 8 78 31 125 50 47 19 108 42 135 51 49 17 190 70 335 128 41 17 91 36 110 43 19 7 68 27 109 44 40 17 78 31 83 31 6 0 24 6 41 14 18 8 86 35 152 61 66 26 134 53 150 60 17 7 86 34 155 60 69 26 157 60 195 75 39 16 97 38 130 50 33 12 64 25 70 29 5 5 39 19 75 31 110 39 140 50 158 59 29 14 202 82 277 108 65 22 100 36 288 113 39 16 100 38 134 50 35 11 86 31 115 44 29 13 109 45 178 71 69 26 157 59 195 75 75 29 177 68 315 120 47 17 96 37 110 43 42 18 92 37 169 62 41 14 79 29 85 33 6 5 44 19 84 31 73 24 173 81 203 117 31 38 39 99 39 305 0 180 -3 209 -20 247 -14 31 -29 47 -54 57 -51 21 -71 19 -166 -21 -47 -19 -112 -46 -145 -58 -95 -37 -317 -126 -350 -140 -16 -8 -48 -20 -70 -29 -61 -23 -148 -57 -170 -66 -28 -12 -169 -68 -240 -95 -157 -61 -253 -99 -280 -111 -50 -23 -93 -40 -260 -105 -194 -75 -379 -148 -420 -165 -16 -7 -57 -23 -90 -35 -33 -12 -64 -25 -70 -29 -5 -4 -32 -15 -60 -25 -27 -10 -81 -30 -120 -45 -210 -84 -267 -106 -335 -131 -41 -14 -84 -32 -95 -38 -11 -6 -92 -39 -180 -73 -88 -33 -194 -74 -235 -91 -41 -17 -93 -37 -115 -45 -22 -9 -53 -21 -70 -28 -49 -21 -108 -43 -135 -51 -14 -3 -47 -17 -75 -29 -27 -12 -75 -31 -105 -41 -30 -10 -59 -21 -65 -25 -5 -4 -53 -23 -105 -43 -52 -20 -108 -43 -125 -51 -16 -7 -57 -23 -90 -36 -33 -12 -82 -30 -110 -41 -147 -58 -350 -64 -475 -13 -19 7 -75 28 -125 45 -49 17 -124 45 -165 62 -41 16 -91 36 -110 43 -19 8 -75 29 -125 49 -49 19 -119 45 -155 59 -36 13 -108 41 -160 62 -171 67 -184 72 -285 110 -55 20 -136 51 -180 67 -44 17 -98 37 -120 45 -22 8 -53 21 -70 28 -16 7 -48 19 -70 28 -22 8 -65 25 -95 37 -30 13 -91 35 -135 51 -44 15 -102 37 -130 49 -27 12 -77 30 -110 41 -33 11 -68 24 -78 29 -9 6 -43 20 -75 31 -31 11 -111 41 -177 66 -143 54 -265 100 -320 121 -22 8 -53 20 -70 27 -16 7 -49 20 -72 29 -24 9 -62 23 -85 32 -66 25 -120 45 -158 59 -19 7 -54 20 -77 29 -24 9 -60 22 -80 30 -109 40 -218 92 -241 116 -15 15 -35 49 -45 76 -15 44 -17 97 -17 529 0 424 2 485 17 525 24 64 48 96 106 138 62 45 88 57 237 118 63 25 151 61 195 78 44 18 96 39 115 46 19 7 63 26 98 41 34 16 67 29 72 29 5 0 38 13 72 28 35 16 83 37 108 46 25 10 59 24 75 31 38 17 89 38 140 58 22 8 79 31 127 51 47 20 89 36 93 36 3 0 30 11 58 23 29 13 70 31 92 39 22 9 78 32 125 51 47 19 103 40 125 47 22 7 51 19 65 26 14 7 67 29 118 49 51 19 101 39 110 44 9 5 35 16 57 24 47 18 142 55 170 66 11 5 40 16 65 26 25 10 73 30 107 46 35 16 67 29 72 29 6 0 27 7 48 16 21 9 52 22 68 29 17 7 47 20 68 29 21 9 42 16 47 16 6 0 34 12 63 26 28 14 72 32 97 41 25 8 81 30 125 48 44 18 132 54 195 80 63 26 147 60 185 76 96 40 198 54 283 40 64 -11 96 -21 187 -62 22 -9 90 -39 150 -65 61 -26 147 -64 193 -85 45 -22 85 -39 87 -39 3 0 33 -13 67 -28 205 -94 269 -122 272 -122 3 0 48 -20 100 -45 53 -25 98 -45 100 -45 3 0 47 -20 98 -44 51 -24 98 -45 103 -47 39 -15 118 -76 135 -103 73 -119 -22 -194 -455 -364 -22 -8 -68 -28 -103 -44 -34 -15 -67 -28 -72 -28 -5 0 -38 -13 -72 -29 -35 -16 -94 -41 -133 -56 -38 -15 -108 -43 -155 -62 -121 -50 -229 -93 -275 -110 -22 -8 -49 -20 -60 -26 -40 -21 -162 -47 -223 -47 -61 0 -186 22 -227 40 -72 32 -119 50 -126 50 -5 0 -37 13 -72 29 -311 147 -519 241 -531 241 -7 0 -30 7 -49 15 -49 20 -337 21 -399 1 -24 -8 -70 -22 -103 -31 -125 -36 -222 -72 -360 -134 -22 -10 -65 -29 -95 -41 -30 -13 -60 -27 -67 -32 -6 -5 -40 -24 -75 -42 -55 -28 -205 -113 -263 -149 -42 -26 -212 -157 -251 -194 -139 -129 -199 -298 -169 -472 27 -152 96 -258 215 -325 58 -33 160 -76 430 -182 91 -35 179 -71 195 -78 27 -13 166 -66 270 -103 70 -25 318 -124 361 -144 22 -10 44 -19 48 -19 10 0 136 -48 159 -61 9 -5 39 -16 65 -25 26 -9 85 -32 132 -51 126 -51 230 -93 273 -109 61 -23 120 -46 152 -59 17 -7 53 -20 80 -30 28 -9 64 -23 80 -30 115 -48 238 -76 344 -77 98 -1 149 9 271 54 30 11 96 35 145 53 101 36 237 89 430 165 72 28 155 60 185 71 30 11 89 34 130 51 41 16 93 37 115 45 22 8 54 21 70 29 31 14 151 60 196 74 14 4 34 12 45 18 10 5 37 17 59 25 60 23 148 57 170 67 11 5 46 18 77 29 32 11 66 25 75 30 10 5 36 16 58 24 22 9 90 36 151 61 62 25 117 46 124 46 6 0 24 6 38 14 15 8 65 29 112 46 47 17 99 38 115 45 17 8 84 35 150 60 179 69 184 70 270 105 44 18 98 39 120 47 22 8 54 21 70 29 17 8 59 25 95 38 87 31 248 94 285 111 17 7 55 22 85 34 30 11 120 46 200 77 80 30 181 69 225 86 44 16 116 45 160 63 44 18 98 39 120 46 67 23 151 76 181 116 l29 38 0 245 c0 235 -1 246 -22 280 -32 51 -75 80 -120 80 -25 0 -86 -20 -168 -56 -72 -31 -164 -68 -205 -84 -136 -50 -264 -102 -327 -131 -35 -16 -67 -29 -73 -29 -5 0 -42 -15 -82 -33 -40 -19 -89 -39 -108 -46 -43 -16 -138 -54 -287 -115 -62 -25 -161 -66 -220 -90 -60 -24 -146 -60 -193 -79 -47 -19 -106 -42 -132 -51 -26 -9 -56 -20 -65 -25 -18 -10 -54 -25 -133 -56 -25 -9 -56 -23 -70 -30 -14 -7 -43 -18 -65 -25 -22 -7 -78 -28 -125 -47 -47 -19 -103 -42 -125 -50 -22 -9 -53 -21 -70 -28 -53 -23 -177 -72 -265 -105 -96 -37 -130 -50 -180 -72 -46 -21 -254 -106 -305 -125 -22 -8 -51 -21 -65 -28 -14 -7 -52 -22 -85 -33 -33 -11 -78 -30 -100 -41 -22 -10 -74 -31 -114 -45 -40 -14 -79 -29 -85 -34 -6 -5 -33 -17 -61 -27 -27 -9 -63 -23 -80 -30 -30 -12 -78 -31 -157 -61 -24 -9 -67 -28 -97 -41 -30 -14 -66 -29 -80 -34 -14 -4 -51 -17 -81 -29 -107 -42 -176 -60 -233 -60 -63 0 -187 25 -227 45 -14 7 -47 21 -75 30 -27 9 -81 29 -120 45 -38 15 -108 42 -155 60 -47 17 -103 38 -125 47 -22 8 -58 22 -80 30 -22 8 -49 20 -59 25 -11 6 -31 14 -45 19 -14 4 -64 22 -111 40 -47 17 -119 44 -160 59 -42 15 -105 39 -140 53 -36 13 -121 46 -190 72 -69 26 -156 59 -195 75 -38 15 -108 42 -155 60 -111 42 -186 79 -206 101 -9 10 -18 37 -21 61 -4 36 0 50 26 85 17 23 49 52 71 63 22 11 60 33 85 49 94 60 368 179 434 189 80 12 185 -5 263 -42 30 -14 58 -26 61 -26 4 0 50 -20 103 -45 52 -25 97 -45 99 -45 2 0 47 -20 99 -45 53 -25 102 -45 109 -45 7 0 17 -4 22 -9 10 -9 304 -135 375 -161 19 -7 49 -18 65 -25 124 -52 219 -70 360 -69 124 0 230 19 328 56 29 11 81 30 117 43 36 13 88 33 115 43 28 11 77 30 110 42 33 12 112 42 175 67 63 24 151 58 195 75 106 40 176 67 200 78 11 5 48 18 83 29 34 12 70 26 80 31 20 11 299 120 308 120 3 0 42 15 87 34 45 19 120 48 167 66 47 18 99 38 115 45 49 20 105 42 195 75 47 18 119 46 160 62 41 17 91 36 110 43 19 7 69 26 110 43 41 16 147 58 235 91 88 34 177 69 198 77 20 7 55 21 77 29 143 54 193 82 220 128 24 38 25 63 5 110 -27 65 -82 98 -325 195 -41 16 -91 36 -110 42 -19 7 -53 21 -75 31 -22 10 -71 30 -110 44 -38 15 -88 35 -110 45 -22 10 -58 25 -80 33 -22 9 -75 29 -119 46 -43 17 -83 31 -87 31 -5 0 -37 13 -72 29 -34 16 -82 36 -107 46 -25 10 -54 21 -65 26 -100 41 -323 131 -390 157 -22 8 -62 25 -90 37 -27 13 -61 26 -75 30 -14 4 -54 19 -90 35 -36 15 -85 35 -110 45 -25 9 -58 23 -75 30 -32 14 -179 72 -285 113 -36 13 -74 28 -85 33 -11 4 -45 18 -75 30 -30 12 -68 27 -85 34 -16 7 -52 21 -80 31 -27 10 -61 24 -75 31 -14 7 -30 13 -37 13 -6 0 -47 16 -90 34 -110 49 -220 93 -348 138 -97 34 -123 39 -220 43 -60 2 -132 0 -160 -4z"/>
             <path d="M7416 9593 c-81 -25 -156 -121 -156 -201 0 -40 33 -112 67 -147 99 -101 230 -99 332 5 107 110 52 299 -100 344 -62 19 -78 19 -143 -1z"/>
         </g>
     </svg>
@@ -476,11 +661,12 @@
                 <div class="filter-scroll" id="filter-bar"></div>
                 <div class="search-box">
                     <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <input type="text" id="global-search" placeholder="搜索装备或车辆..." onkeyup="applyDOMFilterDebounced()">
+                    <input type="text" id="global-search" placeholder="搜索装备或车辆..." onkeyup="applyDOMFilter()">
                 </div>
             </div>
         </div>
     </header>
+
     <div class="content">
         <div class="content-inner">
             
@@ -508,20 +694,48 @@
             </style>
 
             <script>
-                // 性能优化：移除了高频 setInterval，改为在 fetchProducts 后直接调用该方法
-                window.renderShowcaseGallery = function(allData) {
+                // 动态无痕拦截器：使用高频轮询彻底解决光速加载时的时差Bug
+                let interceptorTimer = setInterval(() => {
+                    if (typeof window.renderProducts === 'function' && typeof products !== 'undefined') {
+                        clearInterval(interceptorTimer);
+                        
+                        const isBoss = typeof isAdmin !== 'undefined' && isAdmin;
+                        if (isBoss) {
+                            const uploadBtn = document.querySelector('#showcase-gallery-wrap button.admin-only');
+                            if (uploadBtn) { uploadBtn.classList.remove('admin-only'); uploadBtn.style.display = 'block'; }
+                        }
+                        
+                        const oldRenderProducts = window.renderProducts;
+                        window.renderProducts = function(...args) {
+                            renderShowcaseGallery();
+                            oldRenderProducts.apply(this, args);
+                        };
+
+                        if (products && products.length > 0) {
+                            window.renderProducts();
+                        }
+                    }
+                }, 20);
+
+                function renderShowcaseGallery() {
                     const wrap = document.getElementById('showcase-gallery-wrap');
                     const scrollArea = document.getElementById('showcase-scroll-area');
                     
-                    if (!wrap || !scrollArea || !allData) return;
+                    if (!wrap || !scrollArea || typeof products === 'undefined') return;
 
-                    const showcaseData = allData.filter(p => p.category === '__customer_gallery__');
-                    const isBoss = typeof isAdmin !== 'undefined' && isAdmin;
+                    const showcaseData = [];
+                    const normalProducts = [];
                     
-                    if (isBoss) {
-                        const uploadBtn = document.querySelector('#showcase-gallery-wrap button.admin-only');
-                        if (uploadBtn) { uploadBtn.classList.remove('admin-only'); uploadBtn.style.display = 'block'; }
-                    }
+                    products.forEach(p => {
+                        if (p.category === '__customer_gallery__') {
+                            showcaseData.push(p);
+                        } else {
+                            normalProducts.push(p);
+                        }
+                    });
+                    products = normalProducts; 
+
+                    const isBoss = typeof isAdmin !== 'undefined' && isAdmin;
 
                     if (showcaseData.length === 0 && !isBoss) {
                         wrap.style.display = 'none';
@@ -538,6 +752,7 @@
                         const heartEmpty = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
                         const heartFilled = `<svg viewBox="0 0 24 24" width="14" height="14" fill="#FF4142" stroke="#FF4142" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
                         
+                        // 核心修改点：检测有没有字，没字的话，直接把底部黑色渐变背景隐藏掉！
                         const itemName = (item.name || '').trim();
                         const descHtml = itemName ? `<div class="showcase-desc" style="padding-right: 64px;">${escapeHTML(itemName)}</div>` : '';
 
@@ -555,7 +770,7 @@
                     });
                     
                     scrollArea.innerHTML = html;
-                };
+                }
 
                 window.toggleShowcaseLike = async function(id, btnEl) {
                     triggerHaptic();
@@ -578,7 +793,7 @@
                     localStorage.setItem(`liked_${id}`, 'true');
 
                     try {
-                        const targetItem = window.allRawProducts && window.allRawProducts.find(p => String(p.id) === String(id));
+                        const targetItem = products.concat(window.products || []).find(p => String(p.id) === String(id));
                         if (targetItem) targetItem.price = currentLikes;
 
                         await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}`, {
@@ -623,6 +838,7 @@
                             
                             const imageUrl = `${SUPABASE_URL}/storage/v1/object/public/product-images/${fileName}`; 
                             
+                            // 核心修改点：如果什么都不填，传一个空格占位符给数据库，前端渲染时检测为空，就会去掉黑底显示纯图！
                             const finalDescText = (typeof descText === 'string' && descText.trim()) ? descText.trim() : ' ';
                             const dbPayload = { name: finalDescText, category: '__customer_gallery__', price: 0, in_stock: true, image_url: imageUrl }; 
                             
@@ -666,105 +882,125 @@
             </script>
             <div class="grid" id="products-grid"></div>
             <div id="empty-state-msg" style="display: none; grid-column: 1 / -1; text-align: center; color: var(--text-secondary); margin-top: 60px; font-weight: 400; font-size: 14px;">这页暂无待售商品，待老板后台上新~</div>
-        
         <div id="quote-block-wrap" style="margin-top: 40px; position: relative; overflow: hidden; text-align: center; color: var(--text-secondary); font-size: 14px; line-height: 1.8; letter-spacing: 0.5px; background: var(--card-color); border-radius: var(--radius-lg); border: 0.5px solid var(--divider); box-shadow: 0 6px 24px rgba(0,0,0,0.05);">
-            <div id="quote-bg-img" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; height: 90%; max-width: 400px; background-size: contain; background-position: center; background-repeat: no-repeat; opacity: 0.1; pointer-events: none; transition: background-image 0.4s ease; z-index: 0;"></div>
 
-            <div style="position: relative; z-index: 1; padding: 28px 24px;">
-                <div style="width: 32px; height: 4px; background: var(--accent-color); border-radius: 2px; margin: 0 auto 16px;"></div>
-                
-                <p style="margin-bottom: 18px; font-size: 15px; font-weight: 600; color: var(--text-primary); font-style: italic;">
-                    “人们往往只看到街头呼啸而过的残影，<br>却鲜少看到我们在深夜车库里研究线路、升级卡钳时的专注。”
-                </p>
-                
-                <p style="margin-bottom: 14px; font-weight: 500;">
-                    <strong style="color: var(--text-primary); font-size: 15px;">‘电改无罪’</strong>，因为追求性能的极致、渴望风的自由，以及对机械美学的纯粹热爱，本就不是一种罪过。每一个定制的部件，每一段精心调校的电控代码，都是我们拒绝平庸、为这台钢铁机器注入灵魂的证明。
-                </p>
-                
-                <p style="font-weight: 500;">
-                    但真正的玩家都懂得：<strong style="color: var(--text-primary); font-size: 15px;">无罪的前提，是敬畏。</strong><br>
-                    改装是为了贴地飞行的从容，而不是失去理智的失控。把刹车改得比油门更灵敏，把对规则的尊重和对生命的安全刻在每一次拧动把手之前。只有守住安全的底线，这份对‘电改’的执着与热爱，才能真正在阳光下自由驰骋。
-                </p>
-            </div>
+    <div id="quote-bg-img" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; height: 90%; max-width: 400px; background-size: contain; background-position: center; background-repeat: no-repeat; opacity: 0.1; pointer-events: none; transition: background-image 0.4s ease; z-index: 0;"></div>
 
-            <button class="admin-only" onclick="document.getElementById('quote-bg-upload').click()" style="position: absolute; top: 12px; right: 12px; z-index: 2; background: rgba(0,0,0,0.5); color: #FFF; border: 0.5px solid rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; backdrop-filter: blur(4px);">
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: -2px; margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>更换Logo水印
-            </button>
-            <input type="file" id="quote-bg-upload" accept="image/*" style="display:none" onchange="handleQuoteBgUpload(event)">
-        </div>
+    <div style="position: relative; z-index: 1; padding: 28px 24px;">
+        <div style="width: 32px; height: 4px; background: var(--accent-color); border-radius: 2px; margin: 0 auto 16px;"></div>
+        
+        <p style="margin-bottom: 18px; font-size: 15px; font-weight: 600; color: var(--text-primary); font-style: italic;">
+            “人们往往只看到街头呼啸而过的残影，<br>却鲜少看到我们在深夜车库里研究线路、升级卡钳时的专注。”
+        </p>
+        
+        <p style="margin-bottom: 14px; font-weight: 500;">
+            <strong style="color: var(--text-primary); font-size: 15px;">‘电改无罪’</strong>，因为追求性能的极致、渴望风的自由，以及对机械美学的纯粹热爱，本就不是一种罪过。每一个定制的部件，每一段精心调校的电控代码，都是我们拒绝平庸、为这台钢铁机器注入灵魂的证明。
+        </p>
+        
+        <p style="font-weight: 500;">
+            但真正的玩家都懂得：<strong style="color: var(--text-primary); font-size: 15px;">无罪的前提，是敬畏。</strong><br>
+            改装是为了贴地飞行的从容，而不是失去理智的失控。把刹车改得比油门更灵敏，把对规则的尊重和对生命的安全刻在每一次拧动把手之前。只有守住安全的底线，这份对‘电改’的执着与热爱，才能真正在阳光下自由驰骋。
+        </p>
+    </div>
 
-        <script>
-        // 性能优化：无需再次读取大体积缓存，仅提供更新图片的函数供全局调用
-        window.updateQuoteBg = function(imageUrl) {
-            const bgEl = document.getElementById('quote-bg-img');
-            if (bgEl && imageUrl) bgEl.style.backgroundImage = `url('${imageUrl}')`;
-        };
+    <button class="admin-only" onclick="document.getElementById('quote-bg-upload').click()" style="position: absolute; top: 12px; right: 12px; z-index: 2; background: rgba(0,0,0,0.5); color: #FFF; border: 0.5px solid rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; backdrop-filter: blur(4px);">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: -2px; margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>更换Logo水印
+    </button>
+    <input type="file" id="quote-bg-upload" accept="image/*" style="display:none" onchange="handleQuoteBgUpload(event)">
+</div>
 
-        window.addEventListener('load', () => {
-            if (typeof isAdmin !== 'undefined' && isAdmin) {
-                const uploadBtn = document.querySelector('#quote-block-wrap button.admin-only');
-                if (uploadBtn) uploadBtn.classList.remove('admin-only');
-            }
-        });
-
-        async function handleQuoteBgUpload(event) {
-            if (!isAdmin) return;
-            const file = event.target.files[0];
-            if (!file) return;
-            showToast('正在保存Logo...', 'info');
-            
-            try {
-                const targetFile = file; 
-                const fileExt = file.name.split('.').pop() || 'png';
-                const fileName = `quote-bg-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
-
-                const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${fileName}`, {
-                    method: 'POST',
-                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': targetFile.type || 'image/png' },
-                    body: targetFile
-                });
-                if (!uploadRes.ok) throw new Error('图片上传失败');
-
-                const imageUrl = `${SUPABASE_URL}/storage/v1/object/public/product-images/${fileName}`;
-
-                let existingId = null;
-                if (window.allRawProducts) {
-                    const oldBg = window.allRawProducts.find(p => p.name === 'quote_bg_image' && p.category === '__deleted_category__');
-                    if (oldBg) {
-                        existingId = oldBg.id;
-                        if (oldBg.image_url) deleteStorageFile(oldBg.image_url).catch(e => {}); 
-                    }
+<script>
+function applyQuoteBg() {
+    try {
+        const cache = localStorage.getItem('ygf_products_cache');
+        if (cache) {
+            const parsed = JSON.parse(cache);
+            if (parsed && parsed.data) {
+                const bgData = parsed.data.find(p => p.name === 'quote_bg_image' && p.category === '__deleted_category__');
+                if (bgData && bgData.image_url) {
+                    document.getElementById('quote-bg-img').style.backgroundImage = `url('${bgData.image_url}')`;
                 }
-
-                const dbPayload = { name: 'quote_bg_image', category: '__deleted_category__', price: 0, in_stock: false, image_url: imageUrl };
-                let url = `${SUPABASE_URL}/rest/v1/products`;
-                let method = 'POST';
-                if (existingId) {
-                    url = `${SUPABASE_URL}/rest/v1/products?id=eq.${existingId}`;
-                    method = 'PATCH';
-                }
-
-                const response = await fetch(url, {
-                    method: method,
-                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-                    body: JSON.stringify(dbPayload)
-                });
-
-                if (!response.ok) throw new Error('数据库保存失败');
-
-                showToast('Logo底图更新成功！', 'success');
-                updateQuoteBg(imageUrl);
-
-                try { localStorage.removeItem('ygf_products_cache'); } catch(e) {}
-                if (typeof fetchProducts === 'function') await fetchProducts();
-
-            } catch (error) {
-                showToast('上传失败: ' + error.message, 'error');
-            } finally {
-                event.target.value = ''; 
             }
         }
-        </script>
+    } catch(e) { console.warn('Logo加载异常', e); }
+}
+
+window.addEventListener('load', () => {
+    applyQuoteBg();
+    if (typeof isAdmin !== 'undefined' && isAdmin) {
+        const uploadBtn = document.querySelector('#quote-block-wrap button.admin-only');
+        if (uploadBtn) uploadBtn.classList.remove('admin-only');
+    }
+    if (typeof window.fetchProducts === 'function') {
+        const oldFetchProducts = window.fetchProducts;
+        window.fetchProducts = async function(...args) {
+            await oldFetchProducts.apply(this, args);
+            applyQuoteBg();
+        };
+    }
+});
+
+async function handleQuoteBgUpload(event) {
+    if (!isAdmin) return;
+    const file = event.target.files[0];
+    if (!file) return;
+    showToast('正在保存Logo...', 'info');
+    
+    try {
+        // 修改点2：直接上传原图！绕过会导致透明度变黑的压缩引擎
+        const targetFile = file; 
+        const fileExt = file.name.split('.').pop() || 'png';
+        const fileName = `quote-bg-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+
+        const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${fileName}`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': targetFile.type || 'image/png' },
+            body: targetFile
+        });
+        if (!uploadRes.ok) throw new Error('图片上传失败');
+
+        const imageUrl = `${SUPABASE_URL}/storage/v1/object/public/product-images/${fileName}`;
+
+        const cache = localStorage.getItem('ygf_products_cache');
+        let existingId = null;
+        if (cache) {
+            const parsed = JSON.parse(cache);
+            const oldBg = parsed.data.find(p => p.name === 'quote_bg_image' && p.category === '__deleted_category__');
+            if (oldBg) {
+                existingId = oldBg.id;
+                if (oldBg.image_url) deleteStorageFile(oldBg.image_url).catch(e => {}); 
+            }
+        }
+
+        const dbPayload = { name: 'quote_bg_image', category: '__deleted_category__', price: 0, in_stock: false, image_url: imageUrl };
+        let url = `${SUPABASE_URL}/rest/v1/products`;
+        let method = 'POST';
+        if (existingId) {
+            url = `${SUPABASE_URL}/rest/v1/products?id=eq.${existingId}`;
+            method = 'PATCH';
+        }
+
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify(dbPayload)
+        });
+
+        if (!response.ok) throw new Error('数据库保存失败');
+
+        showToast('Logo底图更新成功！', 'success');
+        document.getElementById('quote-bg-img').style.backgroundImage = `url('${imageUrl}')`;
+
+        try { localStorage.removeItem('ygf_products_cache'); } catch(e) {}
+        if (typeof fetchProducts === 'function') await fetchProducts();
+
+    } catch (error) {
+        showToast('上传失败: ' + error.message, 'error');
+    } finally {
+        event.target.value = ''; 
+    }
+}
+</script>
         </div>
     </div>
 
@@ -795,6 +1031,257 @@
         </div>
     </div>
 
+    <script>
+    window.addEventListener('DOMContentLoaded', () => {
+        window.renderInstallPanel = function() {
+            const cats = getInstallCategories();
+            const content = document.getElementById('install-content');
+            const totalEl = document.getElementById('install-total');
+            
+            let totalFee = 0;
+            let html = '';
+            
+            if (isAdmin) {
+                html += `<button class="checkout-btn" style="margin-bottom: 16px; background: var(--img-bg); color: var(--text-primary); box-shadow: none; border: 1px dashed var(--divider);" onclick="openAdminInstallFeeSetup()">老板：设置各部位装车工时费</button>`;
+            }
+            
+            let availableCount = 0;
+
+            cats.forEach(cat => {
+                const feeConfig = (window.installFeesConfig || {})[cat.id];
+                const price = feeConfig ? feeConfig.price : 0;
+                
+                if (price > 0 || isAdmin) {
+                    availableCount++;
+                    const qty = installCart[cat.id] || 0;
+                    totalFee += price * qty;
+                    
+                    html += `
+                    <div class="cart-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--card-color); border-radius: 8px; margin-bottom: 8px; border: 0.5px solid var(--divider);">
+                        <div class="cart-item-info" style="flex: 1;">
+                            <div class="cart-item-title" style="font-size: 15px; font-weight: 600; color: var(--text-primary);">${escapeHTML(cat.name)}</div>
+                            <div class="cart-item-price" style="font-size: 14px; color: var(--text-secondary); margin-top: 4px;"><span style="font-size: 11px; margin-right: 2px;">¥</span>${price.toFixed(2)} <span style="font-size: 11px; font-weight: normal;">/件</span></div>
+                        </div>
+                        <div class="stepper" style="display: flex; align-items: center; gap: 12px;">
+                            <button class="step-btn" style="font-size: 20px; font-weight: normal; line-height: 1; border: none; background: var(--bg-color); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: var(--text-primary);" onclick="changeInstallQty('${cat.id}', -1)">-</button>
+                            <div class="step-val" style="font-size: 15px; font-weight: 600;">${qty}</div>
+                            <button class="step-btn" style="font-size: 18px; font-weight: normal; line-height: 1; border: none; background: var(--accent-bg); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: var(--accent-color);" onclick="changeInstallQty('${cat.id}', 1)">+</button>
+                        </div>
+                    </div>`;
+                }
+            });
+            
+            if (availableCount === 0) {
+                html += `<div class="empty-state">老板暂未配置独立装车服务，如有需要请直接添加老板微信联系哦。</div>`;
+            }
+            
+            content.innerHTML = html;
+            totalEl.innerText = totalFee.toFixed(2);
+        };
+
+        window.changeInstallQty = function(id, delta) {
+            triggerHaptic();
+            installCart[id] = (installCart[id] || 0) + delta;
+            if (installCart[id] < 0) installCart[id] = 0;
+            renderInstallPanel();
+        };
+
+        window.checkoutInstallOnly = async function() {
+            if (isProcessingOrder) return;
+            const items = Object.keys(installCart).filter(id => installCart[id] > 0);
+            if (items.length === 0) return showToast('请先添加需要装车的部位！', 'warning');
+
+            let contactInfo = document.getElementById('install-buyer-contact').value.trim();
+            if (!contactInfo) {
+                setTimeout(() => document.getElementById('install-buyer-contact').focus(), 100); 
+                return showToast('请填写联系方式', 'warning');
+            } else if (contactInfo.length < 5) {
+                return showToast('联系方式太短，请输入真实的微信号或手机号', 'warning');
+            }
+
+            isProcessingOrder = true;
+            const btn = document.getElementById('install-checkout-btn');
+            const origText = btn.innerText;
+            btn.innerText = '正在生成单据...';
+            btn.disabled = true;
+
+            try {
+                const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, ''); 
+                const randomCode = Math.floor(1000 + Math.random() * 9000); 
+                const orderNo = `WX-${dateStr}-${randomCode}`;
+                
+                let orderText = `【壹工坊摩配 · 自带件装车预约】\n━━━━━━━━━━━━━━\n订单编号：${orderNo}\n联系方式：${contactInfo}\n━━━━━━━━━━━━━━\n装车明细：\n`; 
+                
+                let totalCents = 0;
+                const cats = getInstallCategories();
+                
+                items.forEach((id, index) => {
+                    const cat = cats.find(c => c.id === id);
+                    const name = cat ? cat.name : id;
+                    const qty = installCart[id];
+                    const feeConfig = window.installFeesConfig[id];
+                    const price = feeConfig ? feeConfig.price : 0;
+                    
+                    const itemTotal = Math.round(price * 100) * qty;
+                    orderText += `${index + 1}. 自带[${name}]装车\n   ▸ 数量: ${qty}个  |  工时费: ¥${(itemTotal/100).toFixed(2)}\n`;
+                    totalCents += itemTotal;
+                });
+                
+                const totalStr = (totalCents / 100).toFixed(2);
+                orderText += `━━━━━━━━━━━━━━\n工时费总计：¥${totalStr}\n\n老板你好，我自带了以上配件需要装车，请预留工位！`;
+
+                window.currentOrderText = orderText;
+                const receiptBase64 = await generateReceiptImage(orderText);
+
+                try { localStorage.setItem('yigongfang_last_contact', contactInfo); } catch(e){}
+
+                try { 
+                    if (navigator.clipboard && window.isSecureContext) { 
+                        navigator.clipboard.writeText(orderText).catch(e => console.warn(e)); 
+                    } else { 
+                        const t = document.createElement("textarea"); 
+                        t.value = orderText; 
+                        t.style.position = "fixed"; 
+                        t.style.left = "-9999px"; 
+                        t.style.top = "-9999px"; 
+                        t.setAttribute("readonly", "readonly"); 
+                        document.body.appendChild(t); 
+                        t.select(); 
+                        document.execCommand('copy'); 
+                        document.body.removeChild(t); 
+                    } 
+                } catch (err) {}
+
+                try { 
+                    const encodedContact = encodeOrderContact(contactInfo, 'new');
+                    const dbPayload = { contact: encodedContact, content: orderText }; 
+                    await fetch(`${SUPABASE_URL}/rest/v1/orders`, { 
+                        method: 'POST', 
+                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify(dbPayload) 
+                    }); 
+                } catch(e) {}
+
+                try {
+                    const notifyText = `收到新的【自带件装车】预约！\n工时费总计: ¥${totalStr}\n客户联系: ${contactInfo}`;
+                    fetch('https://wxpusher.zjiecode.com/api/send/message', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            appToken: 'AT_Mg7wgtia4se3Ft9bCK78kLVpTm9sSDGU',
+                            content: notifyText,
+                            summary: '自带件装车预约',
+                            contentType: 1, 
+                            uids: ['UID_WSxlMsHcijIn2p4Sgbg80B0L0NwO']
+                        })
+                    }).catch(e => {});
+                } catch(e) {}
+
+                closeInstallPanel();
+
+                const qrImgSrc = qrCodeUrl ? escapeHTML(qrCodeUrl) : 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=weixin://contacts/profile/wxid_w5lxkhqtn06w22';
+                
+                await showModal({
+                    title: '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; margin-top: 10px; padding-bottom: 10px;"><div style="width: 52px; height: 52px; background: #07C160; color: #FFF; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(7,193,96,0.3); font-size: 28px; font-weight: bold;">✓</div><div style="font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.5px;">装车预约单已生成</div></div>',
+                    desc: `
+                    <div style="text-align: left; font-size: 14px; line-height: 1.6; padding: 0 4px;">
+                        ${receiptBase64 ? `
+                        <div style="text-align: center; margin-bottom: 24px;">
+                            <div style="font-size: 14px; color: var(--accent-color); font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
+                                请长按下方小票保存，发给老板
+                            </div>
+                            <img src="${receiptBase64}" style="width: 85%; max-width: 280px; border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); border: 0.5px solid var(--divider);">
+                        </div>` : ''}
+                        <div style="text-align: center; margin-bottom: 24px;">
+                            <img src="${qrImgSrc}" style="width: 130px; height: 130px; border-radius: 8px; border: 1px solid var(--divider); -webkit-touch-callout: default;">
+                            <div style="font-size: 14px; font-weight: 800; color: var(--text-primary); margin-top: 8px;">长按加老板微信预留工位</div>
+                        </div>
+                        <button onclick="manualCopyOrder(); setTimeout(() => { window.location.href = 'weixin://'; }, 800);" style="background: linear-gradient(90deg, #FF9000, #FF5000); color: #FFF; border: none; padding: 14px 16px; border-radius: 100px; font-size: 16px; font-weight: 800; width: 100%; cursor: pointer;">
+                            备用：一键复制文本明细前往微信
+                        </button>
+                    </div>`,
+                    confirmText: '完成预约',
+                    cancelText: '导航去门店'
+                }).then(action => {
+                    if (action === false) openAmapNavi();
+                });
+
+            } catch(e) {
+                showToast('生成失败，请重试', 'error');
+            } finally {
+                isProcessingOrder = false;
+                btn.innerText = origText;
+                btn.disabled = false;
+            }
+        };
+
+        window.openAdminInstallFeeSetup = async function() {
+            if (!isAdmin) return;
+            const cats = getInstallCategories();
+            
+            let inputsHtml = cats.map(cat => {
+                const feeConfig = (window.installFeesConfig || {})[cat.id];
+                const price = feeConfig ? feeConfig.price : 0;
+                return `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--divider);">
+                    <div style="font-size: 14px; font-weight: 500; color: var(--text-primary); display: flex; align-items: center;">
+                        ${escapeHTML(cat.name)}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 14px; color: var(--text-secondary);">¥</span>
+                        <input type="number" id="fee-input-${cat.id}" class="form-control" style="width: 80px; padding: 8px; text-align: center; background: var(--img-bg);" value="${price}" min="0">
+                    </div>
+                </div>`;
+            }).join('');
+
+            const action = await showModal({
+                title: '设置各部位装车工时费',
+                desc: `<div style="max-height: 50vh; overflow-y: auto; text-align: left; padding-right: 4px; margin-top: 10px; overscroll-behavior: contain;">
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5;">设置后，顾客可以在“自带件装车”界面自主选择需要的服务。<br><b style="color:var(--accent-color);">注：填 0 或不填表示不在客户端显示该项。</b></div>
+                    ${inputsHtml}
+                </div>`,
+                confirmText: '保存全部',
+                cancelText: '取消'
+            });
+
+            if (action === true) {
+                showToast('正在批量保存...', 'info');
+                try {
+                    for (const cat of cats) {
+                        const input = document.getElementById(`fee-input-${cat.id}`);
+                        if (!input) continue;
+                        let newPrice = parseFloat(input.value);
+                        if (isNaN(newPrice) || newPrice < 0) newPrice = 0;
+                        
+                        const existingConfig = (window.installFeesConfig || {})[cat.id];
+                        if (existingConfig) {
+                            if (existingConfig.price !== newPrice) {
+                                await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${existingConfig.id}`, {
+                                    method: 'PATCH',
+                                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ price: newPrice })
+                                });
+                            }
+                        } else if (newPrice > 0) {
+                            await fetch(`${SUPABASE_URL}/rest/v1/products`, {
+                                method: 'POST',
+                                headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ name: cat.id, category: '__install_fees__', price: newPrice, in_stock: true })
+                            });
+                        }
+                    }
+                    showToast('保存成功', 'success');
+                    try { localStorage.removeItem('ygf_products_cache'); } catch(e){}
+                    await fetchProducts();
+                    renderInstallPanel();
+                } catch(e) {
+                    showToast('保存失败，请检查网络', 'error');
+                }
+            }
+        };
+    });
+    </script>
+
     <div class="cart-panel-overlay" id="cart-overlay" onclick="closeCart()"></div>
     <div class="cart-panel" id="cart-panel">
         <div class="cart-header">
@@ -814,6 +1301,27 @@
                 <input type="text" id="buyer-contact" class="form-control" placeholder="必填：微信号或手机号" style="background: var(--card-color); border: none; padding: 12px; font-size: 14px;">
             </div>
             <button class="checkout-btn" id="checkout-btn" onclick="checkout()">生成订单凭证</button>
+            <script>
+                // 动态覆写底层结账逻辑，无需额外去修改底部代码
+                document.addEventListener('DOMContentLoaded', () => {
+                    window.checkout = async function() {
+                        if (isProcessingOrder) return;
+                        if (cart.length === 0) return showToast('请先向清单选填商品！', 'warning');
+
+                        let contactInfo = document.getElementById('buyer-contact').value.trim();
+
+                        if (!contactInfo) { 
+                            setTimeout(() => document.getElementById('buyer-contact').focus(), 100); 
+                            return showToast('请填写联系方式后再生成订单', 'warning');
+                        } else if (contactInfo.length < 5) {
+                            return showToast('联系方式太短，请输入真实的微信号或手机号', 'warning');
+                        }
+
+                        // 直接触发生成，备注参数强制传空
+                        await processOrderSubmission(cart, contactInfo, '', 'checkout-btn', true);
+                    };
+                });
+            </script>
         </div>
     </div>
 
@@ -870,7 +1378,8 @@
             <div id="orders-content"></div>
         </div>
     </div>
-<div class="cart-panel-overlay" id="admin-overlay" onclick="closeAdmin()"></div>
+
+    <div class="cart-panel-overlay" id="admin-overlay" onclick="closeAdmin()"></div>
     <div class="cart-panel" id="admin-panel">
         <div class="cart-header">
             <span id="admin-sheet-title">上架新商品</span>
@@ -911,8 +1420,8 @@
             <button type="button" class="delete-btn" id="delete-btn" onclick="deleteProduct()">永久下架此商品</button>
             <div style="height: 1px; background: var(--divider); margin: 16px 0;"></div>
             <div style="display: flex; gap: 10px;">
-                <button type="button" class="checkout-btn" style="flex: 1; background: #07c160; color: #FFF; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 14px; padding: 12px 0;" onclick="document.getElementById('qr-upload-input').click()">更新微信二维码</button>
-                <button type="button" class="checkout-btn" style="flex: 1; background: #FF9500; color: #FFF; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 14px; padding: 12px 0;" onclick="document.getElementById('pay-qr-upload-input').click()">更新收款码</button>
+                <button type="button" class="checkout-btn" style="flex: 1; background: linear-gradient(90deg, #07c160, #06ad56); font-size: 14px; padding: 12px 0;" onclick="document.getElementById('qr-upload-input').click()">更新微信二维码</button>
+                <button type="button" class="checkout-btn" style="flex: 1; background: linear-gradient(90deg, #FF9500, #FFaa00); font-size: 14px; padding: 12px 0;" onclick="document.getElementById('pay-qr-upload-input').click()">更新收款码</button>
             </div>
             <input type="file" id="qr-upload-input" accept="image/*" style="display:none" onchange="handleQRUpload(event)">
             <input type="file" id="pay-qr-upload-input" accept="image/*" style="display:none" onchange="handlePayQRUpload(event)">
@@ -955,7 +1464,7 @@
             <input type="file" id="shop-image-upload" accept="image/*" style="display:none" onchange="handleShopImageUpload(event)">
             <div id="shop-map"></div>
             <div style="padding: 20px;">
-                <button class="checkout-btn hide-in-wechat" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" onclick="openAmapNavi()"><svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>一键唤起高德导航</button>
+                <button class="checkout-btn hide-in-wechat" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="openAmapNavi()"><svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>一键唤起高德导航</button>
                 <div class="show-in-wechat" style="text-align: center; color: var(--accent-color); font-size: 14px; font-weight: 500; padding: 8px 0; display: flex; flex-direction: column; align-items: center; gap: 4px;">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M9 21h6M12 17v4M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17c0 1.1.9 2 2 2h4c1.1 0 2-.9 2-2v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7z"></path></svg>
                     微信内无法直接唤起导航<br><span style="color: var(--text-secondary); font-size: 12px; display: inline-block;">请点击右上角「···」在浏览器中打开</span>
@@ -1021,7 +1530,7 @@
             return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; 
         }
 
-        /* ================= 前端纯净压缩引擎 ================= */
+        /* ================= 前端纯净压缩引擎 (升级版: WebP 视觉无损压缩) ================= */
         async function compressImage(file, maxWidth = 1920, maxHeight = 1920, quality = 0.85) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -1194,7 +1703,7 @@
                     document.body.classList.remove('no-scroll'); 
                     document.body.style.top = ''; 
                     
-                    // 【关键保留：强制读取 DOM 属性，逼迫 iOS 浏览器立刻重绘画面，防止白屏卡死】
+                    // 【经典老方法：强制读取 DOM 属性，逼迫 iOS 浏览器立刻重绘画面】
                     void document.body.offsetHeight; 
                     
                     window.scrollTo(0, scrollPosition); 
@@ -1429,7 +1938,7 @@
             currentUsedCategory = sessionStorage.getItem('yigongfang_used_category') || 'used_all';
             window.currentCustomCategory = sessionStorage.getItem('yigongfang_custom_category') || 'all';
             isAdmin = localStorage.getItem('isShopAdmin') === 'true';
-        } catch(e) {}
+        } catch(e) { console.warn('Storage Error:', e); }
         
         let tapCount = 0; let tapTimeout; let lastOrderCount = -1; let orderPollInterval = null;
         window.currentAdminOrderFilter = 'all';
@@ -1438,7 +1947,7 @@
             try { 
                 const savedCart = localStorage.getItem('yigongfang_cart'); 
                 if (savedCart) cart = JSON.parse(savedCart); 
-            } catch (e) {} 
+            } catch (e) { console.warn('Cart parse Error:', e); } 
         }
 
         function syncCartWithDatabase() {
@@ -1496,7 +2005,7 @@
         }
 
         function updateCart() {
-            try { localStorage.setItem('yigongfang_cart', JSON.stringify(cart)); } catch(e){}
+            try { localStorage.setItem('yigongfang_cart', JSON.stringify(cart)); } catch(e){ console.warn(e); }
             
             const content = document.getElementById('cart-content'); 
             const badges = document.querySelectorAll('.cart-badge-count'); 
@@ -1645,6 +2154,7 @@
             await processOrderSubmission(cart, contactInfo, remarkInfo, 'checkout-btn', true);
         }
 
+        // 1. 纯原生 Canvas 极速手绘小票引擎
         window.generateReceiptImage = async function(orderText) {
             return new Promise((resolve) => {
                 try {
@@ -1767,18 +2277,20 @@
 
                     resolve(finalCanvas.toDataURL('image/jpeg', 0.95));
                 } catch (err) {
+                    console.error("原生手绘小票出错:", err);
                     resolve(null);
                 }
             });
         };
 
+// 2. 订单提交流程（纯文本化）
         window.processOrderSubmission = async function(itemsArray, contactInfo, remarkInfo, btnId, isFromCart) {
             try { 
                 const lastSubmit = localStorage.getItem('yigongfang_last_submit_time'); 
                 if (lastSubmit && Date.now() - parseInt(lastSubmit, 10) < 5000) { 
                     return showToast('提交得太快啦，请稍等再试', 'warning'); 
                 } 
-            } catch(e) {}
+            } catch(e) { console.warn(e); }
 
             isProcessingOrder = true;
             const btn = btnId ? document.getElementById(btnId) : null;
@@ -1822,7 +2334,7 @@
                 try { 
                     if (contactInfo) localStorage.setItem('yigongfang_last_contact', contactInfo); 
                     localStorage.setItem('yigongfang_last_submit_time', Date.now().toString()); 
-                } catch(e) {}
+                } catch(e) { console.warn(e); }
 
                 try { 
                     if (navigator.clipboard && window.isSecureContext) { 
@@ -1851,7 +2363,7 @@
                         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }, 
                         body: JSON.stringify(dbPayload) 
                     }); 
-                } catch(e) {}
+                } catch(e) { console.warn('DB API Failed', e); }
 
                 try {
                     const notifyText = `壹工坊收到新意向单！\n订单总计: ¥${totalStr}\n客户联系: ${contactInfo}\n\n请尽快去网页后台查看客户的详细需求清单。`;
@@ -1869,7 +2381,7 @@
                             uids: [bossUid]
                         })
                     }).catch(e => {});
-                } catch(e) {}
+                } catch(e) { console.warn('Push Error', e); }
 
                 try {
                     let stockChanged = false;
@@ -1897,7 +2409,7 @@
                         try { localStorage.removeItem('ygf_products_cache'); } catch(e) {}
                         fetchProducts(); 
                     }
-                } catch(e) {}
+                } catch(e) { console.warn('库存扣除异常', e); }
 
                 if (isFromCart) {
                     cart = []; 
@@ -1912,7 +2424,7 @@
                 const payRemarkString = remarkInfo ? `尾号${orderNo.slice(-4)} ${remarkInfo}` : `订单尾号${orderNo.slice(-4)}`;
 
                 const finalAction = await showModal({
-                    title: '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; margin-top: 10px; padding-bottom: 10px;"><div style="width: 52px; height: 52px; background: #07C160; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"><svg viewBox="0 0 24 24" width="32" height="32" stroke="#FFF" stroke-width="3" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.5px;">订单凭证已生成</div></div>',
+                    title: '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; margin-top: 10px; padding-bottom: 10px;"><div style="width: 52px; height: 52px; background: #07C160; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(7,193,96,0.3);"><svg viewBox="0 0 24 24" width="32" height="32" stroke="#FFF" stroke-width="3" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.5px;">订单凭证已生成</div></div>',
                     desc: `
                     <div style="text-align: left; font-size: 14px; line-height: 1.6; padding: 0 4px;">
                         ${receiptBase64 ? `
@@ -1961,7 +2473,7 @@
                             </div>
                         </div>
 
-                        <button onclick="manualCopyOrder(); setTimeout(() => { window.location.href = 'weixin://'; }, 800);" style="background: linear-gradient(90deg, #FF9000, #FF5000); color: #FFF; border: none; padding: 14px 16px; border-radius: 100px; font-size: 16px; font-weight: 800; width: 100%; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 6px; letter-spacing: 0.5px;">
+                        <button onclick="manualCopyOrder(); setTimeout(() => { window.location.href = 'weixin://'; }, 800);" style="background: linear-gradient(90deg, #FF9000, #FF5000); color: #FFF; border: none; padding: 14px 16px; border-radius: 100px; font-size: 16px; font-weight: 800; width: 100%; cursor: pointer; box-shadow: 0 6px 16px rgba(255, 80, 0, 0.25); display: flex; align-items: center; justify-content: center; gap: 6px; letter-spacing: 0.5px;">
                             备用：一键复制文本明细前往微信
                         </button>
                     </div>`,
@@ -1990,7 +2502,7 @@
         function openUserOrders() {
             closeAllPanels();
             let lastContact = '';
-            try { lastContact = localStorage.getItem('yigongfang_last_contact') || ''; } catch(e){}
+            try { lastContact = localStorage.getItem('yigongfang_last_contact') || ''; } catch(e){ console.warn(e); }
             const contactInput = document.getElementById('query-contact-input');
             contactInput.value = lastContact;
             document.getElementById('user-orders-result').innerHTML = '';
@@ -2016,6 +2528,7 @@
 
         let isQuerying = false;
 
+        // 3. 历史订单查询逻辑
         window.queryUserOrders = async function() {
             if (isQuerying) return;
             const contactInput = document.getElementById('query-contact-input').value.trim();
@@ -2043,7 +2556,7 @@
                     return;
                 }
                 
-                try { localStorage.setItem('yigongfang_last_contact', contactInput); } catch(e){}
+                try { localStorage.setItem('yigongfang_last_contact', contactInput); } catch(e){ console.warn(e); }
 
                 resultContainer.innerHTML = orders.map(order => {
                     const cleanContent = (order.content || '').trim();
@@ -2086,6 +2599,7 @@
             }
         };
 
+        // 4. 小票历史回看逻辑
         window.reopenOrderModal = async function(encodedContent) {
             showToast('正在调取专属小票...', 'info');
             const content = decodeURIComponent(encodedContent);
@@ -2159,7 +2673,7 @@
                         </div>
                     </div>
 
-                    <button onclick="manualCopyOrder(); setTimeout(() => { window.location.href = 'weixin://'; }, 800);" style="background: linear-gradient(90deg, #FF9000, #FF5000); color: #FFF; border: none; padding: 14px 16px; border-radius: 100px; font-size: 16px; font-weight: 800; width: 100%; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 6px; letter-spacing: 0.5px;">
+                    <button onclick="manualCopyOrder(); setTimeout(() => { window.location.href = 'weixin://'; }, 800);" style="background: linear-gradient(90deg, #FF9000, #FF5000); color: #FFF; border: none; padding: 14px 16px; border-radius: 100px; font-size: 16px; font-weight: 800; width: 100%; cursor: pointer; box-shadow: 0 6px 16px rgba(255, 80, 0, 0.25); display: flex; align-items: center; justify-content: center; gap: 6px; letter-spacing: 0.5px;">
                         备用：一键复制文本明细前往微信
                     </button>
                 </div>`,
@@ -2211,6 +2725,7 @@
                     lastOrderCount = count;
                 }
             } catch (e) {
+                console.warn('Poll Orders Failed:', e);
             } finally { 
                 isPolling = false; 
             }
@@ -2822,7 +3337,7 @@
         function switchZone(zone) { 
             triggerHaptic(); 
             currentZone = zone; 
-            try { sessionStorage.setItem('yigongfang_zone', zone); } catch(e) {} 
+            try { sessionStorage.setItem('yigongfang_zone', zone); } catch(e) { console.warn(e); } 
             renderZones();
             initFiltersDOM(); 
             applyDOMFilter(); 
@@ -2832,13 +3347,13 @@
             triggerHaptic(); 
             if (currentZone === 'parts') { 
                 currentCategory = id; 
-                try { sessionStorage.setItem('yigongfang_category', id); } catch(e){} 
+                try { sessionStorage.setItem('yigongfang_category', id); } catch(e){ console.warn(e); } 
             } else if (currentZone === 'used_cars') { 
                 currentUsedCategory = id === 'all' ? 'used_all' : id; 
-                try { sessionStorage.setItem('yigongfang_used_category', currentUsedCategory); } catch(e){} 
+                try { sessionStorage.setItem('yigongfang_used_category', currentUsedCategory); } catch(e){ console.warn(e); } 
             } else {
                 window.currentCustomCategory = id;
-                try { sessionStorage.setItem('yigongfang_custom_category', id); } catch(e){}
+                try { sessionStorage.setItem('yigongfang_custom_category', id); } catch(e){ console.warn(e); }
             }
             initFiltersDOM();
             applyDOMFilter(); 
@@ -2859,10 +3374,8 @@
                        p.category !== '__announcement__' && 
                        p.category !== '__pay_qr_code__' &&
                        p.category !== '__zone__' &&
-                       p.category !== '__install_fees__' &&
                        !(p.category && p.category.startsWith('__category__')) &&
-                       p.category !== '__deleted_category__' &&
-                       p.category !== '__customer_gallery__'; 
+                       p.category !== '__deleted_category__'; 
             });
             
             const sortedProducts = [...allValidProducts].sort((a, b) => { 
@@ -2985,12 +3498,6 @@
             }
         }
 
-        let filterTimeout;
-        window.applyDOMFilterDebounced = function() {
-            clearTimeout(filterTimeout);
-            filterTimeout = setTimeout(applyDOMFilter, 300);
-        };
-
         function openCarDetails(id) { 
             triggerHaptic(); 
             const product = products.find(p => String(p.id) === String(id)); 
@@ -3111,7 +3618,7 @@
                     method: 'DELETE', 
                     headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
                 }); 
-            } catch (e) {} 
+            } catch (e) { console.warn('Delete Image Error:', e); } 
         }
 
         async function checkSecret() { 
@@ -3151,13 +3658,26 @@
         }
         
         function parseFetchedData(allData) { 
-            window.allRawProducts = allData;
+            // ================= 新增：ImageKit 流量拦截器 =================
+            const CDN_HOST = 'https://ik.imagekit.io/yigongfang'; 
 
+            allData.forEach(item => {
+                if (item.image_url) {
+                    // 悄悄把直连地址替换成 ImageKit 节点
+                    item.image_url = item.image_url.replaceAll('https://jcwakdehorzivjbcxcmy.supabase.co', CDN_HOST);
+                }
+            });
+            // ==========================================================
+
+            // ======= 终极修复：直接在这里读取名言Logo底图... (保留原有的下面这些代码)
+// ==========================================================
+            // ======= 终极修复：直接在这里读取名言Logo底图，彻底抛弃本地缓存依赖 =======
             const bgData = allData.find(p => p.name === 'quote_bg_image' && p.category === '__deleted_category__');
             if (bgData && bgData.image_url) {
                 const bgEl = document.getElementById('quote-bg-img');
                 if (bgEl) bgEl.style.backgroundImage = `url('${bgData.image_url}')`;
             }
+            // ====================================================================
 
             const qrData = allData.find(p => p.category === '__qr_code__'); 
             if (qrData) { qrCodeUrl = qrData.image_url; qrCodeId = qrData.id; } 
@@ -3198,8 +3718,7 @@
                 p.category !== '__zone__' &&
                 p.category !== '__install_fees__' &&
                 !(p.category && p.category.startsWith('__category__')) &&
-                p.category !== '__deleted_category__' &&
-                p.category !== '__customer_gallery__'
+                p.category !== '__deleted_category__'
             ); 
             
             renderZones();
@@ -3211,7 +3730,7 @@
             let cacheObj = null;
             let hasRenderedCache = false;
 
-            try { cachedData = localStorage.getItem('ygf_products_cache'); } catch (e) {}
+            try { cachedData = localStorage.getItem('ygf_products_cache'); } catch (e) { console.warn(e); }
 
             if (cachedData) {
                 try {
@@ -3222,16 +3741,16 @@
                         renderProducts();
                         renderShopGallery();
                         renderAnnouncement();
-                        if (typeof window.renderShowcaseGallery === 'function') window.renderShowcaseGallery(cacheObj.data);
                         syncCartWithDatabase();
                         hasRenderedCache = true;
 
-                        const CACHE_LIFETIME = isAdmin ? 0 : 5 * 60 * 1000;
+                        // 修改为 5 分钟 (5分钟 * 60秒 * 1000毫秒 = 300,000毫秒)
+                         const CACHE_LIFETIME = isAdmin ? 0 : 5 * 60 * 1000;
                         if (Date.now() - cacheObj.timestamp < CACHE_LIFETIME) {
                             return; 
                         }
                     }
-                } catch (e) {}
+                } catch (e) { console.warn("Cache parse error", e); }
             }
 
             if (!hasRenderedCache) {
@@ -3249,7 +3768,7 @@
                 
                 clearTimeout(timeoutId);
 
-                if (!response.ok) throw new Error("HTTP Error " + response.status);
+                if (!response.ok) throw new Error(await response.text());
                 const allData = await response.json();
 
                 const newDataStr = JSON.stringify(allData);
@@ -3257,20 +3776,21 @@
 
                 if (newDataStr !== oldDataStr) {
                     parseFetchedData(allData);
-                    try { localStorage.setItem('ygf_products_cache', JSON.stringify({ timestamp: Date.now(), data: allData })); } catch (e) {}
+                    try { localStorage.setItem('ygf_products_cache', JSON.stringify({ timestamp: Date.now(), data: allData })); } catch (e) { console.warn(e); }
                     initFiltersDOM();
                     renderProducts();
                     renderShopGallery();
                     renderAnnouncement();
-                    if (typeof window.renderShowcaseGallery === 'function') window.renderShowcaseGallery(allData);
                     syncCartWithDatabase();
                 } else if (cacheObj) {
-                    try { localStorage.setItem('ygf_products_cache', JSON.stringify({ timestamp: Date.now(), data: cacheObj.data })); } catch (e) {}
+                    try { localStorage.setItem('ygf_products_cache', JSON.stringify({ timestamp: Date.now(), data: cacheObj.data })); } catch (e) { console.warn(e); }
                 }
 
             } catch (error) {
-                console.error("fetchProducts 失败:", error);
-                if (!hasRenderedCache) {
+                console.warn('Network request failed or timed out:', error);
+                if (hasRenderedCache) {
+                    console.warn('Network offline, using cached data.');
+                } else {
                     grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); margin-top: 60px;">获取数据失败，请检查网络...</div>';
                 }
             }
@@ -3312,7 +3832,7 @@
                     
                     if (!response.ok) throw new Error();
                     showToast('公告已更新', 'success'); 
-                    try { localStorage.removeItem('ygf_products_cache'); } catch(e) {} 
+                    try { localStorage.removeItem('ygf_products_cache'); } catch(e) { console.warn(e); } 
                     fetchProducts();
                 } catch(e) { showToast('保存失败', 'error'); }
             }
@@ -3466,7 +3986,7 @@
                 
                 if (!response.ok) throw new Error(await response.text()); 
                 showToast(idStr ? '修改保存成功！' : '上架成功！', 'success'); 
-                try { localStorage.removeItem('ygf_products_cache'); } catch(e) {} 
+                try { localStorage.removeItem('ygf_products_cache'); } catch(e) { console.warn(e); } 
                 closeAdmin(); 
                 await fetchProducts(); 
             } catch (error) { 
@@ -3497,10 +4017,10 @@
                     method: 'DELETE', 
                     headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
                 }); 
-                if (!response.ok) throw new Error(); 
+                if (!response.ok) throw new Error(await response.text()); 
                 
                 showToast('已下架', 'success'); 
-                try { localStorage.removeItem('ygf_products_cache'); } catch(e) {} 
+                try { localStorage.removeItem('ygf_products_cache'); } catch(e) { console.warn(e); } 
                 closeAdmin(); 
                 await fetchProducts(); 
             } catch (error) { 
@@ -3671,6 +4191,458 @@
             if(window.closeInstallPanel) window.closeInstallPanel();
         }
 
+        let installCart = {};
+
+        function getInstallCategories() {
+            const defaultCats = categories.filter(c => c.id !== 'all' && !(window.deletedCategoryIds || []).includes(c.id));
+            const customPartsCats = (window.customCategories || []).filter(c => c.zoneId === 'parts');
+            return [...defaultCats, ...customPartsCats];
+        }
+
+        window.openInstallPanel = function() {
+            closeAllPanels();
+            document.getElementById('install-panel').classList.add('active');
+            document.getElementById('install-overlay').classList.add('active');
+            toggleBodyScroll();
+            installCart = {};
+            renderInstallPanel();
+        }
+
+        window.closeInstallPanel = function() {
+            const panel = document.getElementById('install-panel');
+            if (panel.classList.contains('active')) {
+                panel.classList.remove('active');
+                document.getElementById('install-overlay').classList.remove('active');
+                toggleBodyScroll();
+            }
+        }
+
+        window.renderInstallPanel = function() {
+            const cats = getInstallCategories();
+            const content = document.getElementById('install-content');
+            const totalEl = document.getElementById('install-total');
+            
+            let totalFee = 0;
+            let html = '';
+            
+            if (isAdmin) {
+                html += `<button class="checkout-btn" style="margin-bottom: 16px; background: var(--img-bg); color: var(--text-primary); box-shadow: none; border: 1px dashed var(--divider); display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="openAdminInstallFeeSetup()"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>老板：设置各部位装车工时费</button>`;
+            }
+            
+            let availableCount = 0;
+
+            cats.forEach(cat => {
+                const feeConfig = (window.installFeesConfig || {})[cat.id];
+                const price = feeConfig ? feeConfig.price : 0;
+                
+                if (price > 0 || isAdmin) {
+                    availableCount++;
+                    const qty = installCart[cat.id] || 0;
+                    totalFee += price * qty;
+                    
+                    html += `
+                    <div class="cart-item">
+                        <div class="cart-item-img" style="background: transparent; border: none; align-items: center; justify-content: flex-start; width: 40px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" stroke="var(--accent-color)" stroke-width="1.5" fill="none">${categoryIcons[cat.id] || categoryIcons.default}</svg>
+                        </div>
+                        <div class="cart-item-info">
+                            <div class="cart-item-title">${escapeHTML(cat.name)}</div>
+                            <div class="cart-item-price" style="font-size: 14px; color: var(--text-secondary);"><span style="font-size: 11px; margin-right: 2px;">¥</span>${price.toFixed(2)} <span style="font-size: 11px; font-weight: normal;">/件</span></div>
+                        </div>
+                        <div class="stepper">
+                            <button class="step-btn" onclick="changeInstallQty('${cat.id}', -1)"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3" fill="none"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                            <div class="step-val">${qty}</div>
+                            <button class="step-btn" onclick="changeInstallQty('${cat.id}', 1)"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                        </div>
+                    </div>`;
+                }
+            });
+            
+            if (availableCount === 0) {
+                html += `<div class="empty-state">老板暂未配置独立装车服务，如有需要请直接添加老板微信联系哦。</div>`;
+            }
+            
+            content.innerHTML = html;
+            totalEl.innerText = totalFee.toFixed(2);
+        }
+
+        window.changeInstallQty = function(id, delta) {
+            triggerHaptic();
+            installCart[id] = (installCart[id] || 0) + delta;
+            if (installCart[id] < 0) installCart[id] = 0;
+            renderInstallPanel();
+        }
+
+        window.checkoutInstallOnly = async function() {
+            if (isProcessingOrder) return;
+            const items = Object.keys(installCart).filter(id => installCart[id] > 0);
+            if (items.length === 0) return showToast('请先添加需要装车的部位！', 'warning');
+
+            let contactInfo = document.getElementById('install-buyer-contact').value.trim();
+            if (!contactInfo) {
+                setTimeout(() => document.getElementById('install-buyer-contact').focus(), 100); 
+                return showToast('请填写联系方式', 'warning');
+            } else if (contactInfo.length < 5) {
+                return showToast('联系方式太短，请输入真实的微信号或手机号', 'warning');
+            }
+
+            isProcessingOrder = true;
+            const btn = document.getElementById('install-checkout-btn');
+            const origText = btn.innerText;
+            btn.innerText = '正在生成单据...';
+            btn.disabled = true;
+
+            try {
+                const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, ''); 
+                const randomCode = Math.floor(1000 + Math.random() * 9000); 
+                const orderNo = `WX-${dateStr}-${randomCode}`;
+                
+                let orderText = `【壹工坊摩配 · 自带件装车预约】\n━━━━━━━━━━━━━━\n订单编号：${orderNo}\n联系方式：${contactInfo}\n━━━━━━━━━━━━━━\n装车明细：\n`; 
+                
+                let totalCents = 0;
+                const cats = getInstallCategories();
+                
+                items.forEach((id, index) => {
+                    const cat = cats.find(c => c.id === id);
+                    const name = cat ? cat.name : id;
+                    const qty = installCart[id];
+                    const feeConfig = window.installFeesConfig[id];
+                    const price = feeConfig ? feeConfig.price : 0;
+                    
+                    const itemTotal = Math.round(price * 100) * qty;
+                    orderText += `${index + 1}. 自带[${name}]装车\n   ▸ 数量: ${qty}个  |  工时费: ¥${(itemTotal/100).toFixed(2)}\n`;
+                    totalCents += itemTotal;
+                });
+                
+                const totalStr = (totalCents / 100).toFixed(2);
+                orderText += `━━━━━━━━━━━━━━\n工时费总计：¥${totalStr}\n\n老板你好，我自带了以上配件需要装车，请预留工位！`;
+
+                window.currentOrderText = orderText;
+                const receiptBase64 = await generateReceiptImage(orderText);
+
+                try { localStorage.setItem('yigongfang_last_contact', contactInfo); } catch(e){}
+
+                try { 
+                    if (navigator.clipboard && window.isSecureContext) { 
+                        navigator.clipboard.writeText(orderText).catch(e => console.warn(e)); 
+                    } else { 
+                        const t = document.createElement("textarea"); 
+                        t.value = orderText; 
+                        t.style.position = "fixed"; 
+                        t.style.left = "-9999px"; 
+                        t.style.top = "-9999px"; 
+                        t.setAttribute("readonly", "readonly"); 
+                        document.body.appendChild(t); 
+                        t.select(); 
+                        document.execCommand('copy'); 
+                        document.body.removeChild(t); 
+                    } 
+                } catch (err) {}
+
+                try { 
+                    const encodedContact = encodeOrderContact(contactInfo, 'new');
+                    const dbPayload = { contact: encodedContact, content: orderText }; 
+                    await fetch(`${SUPABASE_URL}/rest/v1/orders`, { 
+                        method: 'POST', 
+                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify(dbPayload) 
+                    }); 
+                } catch(e) {}
+
+                try {
+                    const notifyText = `收到新的【自带件装车】预约！\n工时费总计: ¥${totalStr}\n客户联系: ${contactInfo}`;
+                    fetch('https://wxpusher.zjiecode.com/api/send/message', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            appToken: 'AT_Mg7wgtia4se3Ft9bCK78kLVpTm9sSDGU',
+                            content: notifyText,
+                            summary: '自带件装车预约',
+                            contentType: 1, 
+                            uids: ['UID_WSxlMsHcijIn2p4Sgbg80B0L0NwO']
+                        })
+                    }).catch(e => {});
+                } catch(e) {}
+
+                closeInstallPanel();
+
+                const qrImgSrc = qrCodeUrl ? escapeHTML(qrCodeUrl) : 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=weixin://contacts/profile/wxid_w5lxkhqtn06w22';
+                
+                await showModal({
+                    title: '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; margin-top: 10px; padding-bottom: 10px;"><div style="width: 52px; height: 52px; background: #07C160; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(7,193,96,0.3);"><svg viewBox="0 0 24 24" width="32" height="32" stroke="#FFF" stroke-width="3" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.5px;">装车预约单已生成</div></div>',
+                    desc: `
+                    <div style="text-align: left; font-size: 14px; line-height: 1.6; padding: 0 4px;">
+                        ${receiptBase64 ? `
+                        <div style="text-align: center; margin-bottom: 24px;">
+                            <div style="font-size: 14px; color: var(--accent-color); font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                请长按下方小票保存，发给老板
+                            </div>
+                            <img src="${receiptBase64}" style="width: 85%; max-width: 280px; border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); border: 0.5px solid var(--divider);">
+                        </div>` : ''}
+                        <div style="text-align: center; margin-bottom: 24px;">
+                            <img src="${qrImgSrc}" style="width: 130px; height: 130px; border-radius: 8px; border: 1px solid var(--divider); -webkit-touch-callout: default;">
+                            <div style="font-size: 14px; font-weight: 800; color: var(--text-primary); margin-top: 8px;">长按加老板微信预留工位</div>
+                        </div>
+                        <button onclick="manualCopyOrder(); setTimeout(() => { window.location.href = 'weixin://'; }, 800);" style="background: linear-gradient(90deg, #FF9000, #FF5000); color: #FFF; border: none; padding: 14px 16px; border-radius: 100px; font-size: 16px; font-weight: 800; width: 100%; cursor: pointer;">
+                            备用：一键复制文本明细前往微信
+                        </button>
+                    </div>`,
+                    confirmText: '完成预约',
+                    cancelText: '导航去门店'
+                }).then(action => {
+                    if (action === false) openAmapNavi();
+                });
+
+            } catch(e) {
+                showToast('生成失败，请重试', 'error');
+            } finally {
+                isProcessingOrder = false;
+                btn.innerText = origText;
+                btn.disabled = false;
+            }
+        }
+
+        window.openAdminInstallFeeSetup = async function() {
+            if (!isAdmin) return;
+            const cats = getInstallCategories();
+            
+            let inputsHtml = cats.map(cat => {
+                const feeConfig = (window.installFeesConfig || {})[cat.id];
+                const price = feeConfig ? feeConfig.price : 0;
+                return `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--divider);">
+                    <div style="font-size: 14px; font-weight: 500; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" stroke="var(--text-secondary)" stroke-width="1.5" fill="none">${categoryIcons[cat.id] || categoryIcons.default}</svg>
+                        ${escapeHTML(cat.name)}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 14px; color: var(--text-secondary);">¥</span>
+                        <input type="number" id="fee-input-${cat.id}" class="form-control" style="width: 80px; padding: 8px; text-align: center; background: var(--img-bg);" value="${price}" min="0">
+                    </div>
+                </div>`;
+            }).join('');
+
+            const action = await showModal({
+                title: '设置各部位装车工时费',
+                desc: `<div style="max-height: 50vh; overflow-y: auto; text-align: left; padding-right: 4px; margin-top: 10px; overscroll-behavior: contain;">
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5;">设置后，顾客可以在“自带件装车”界面自主选择需要的服务。<br><b style="color:var(--accent-color);">注：填 0 或不填表示不在客户端显示该项。</b></div>
+                    ${inputsHtml}
+                </div>`,
+                confirmText: '保存全部',
+                cancelText: '取消'
+            });
+
+            if (action === true) {
+                showToast('正在批量保存...', 'info');
+                try {
+                    for (const cat of cats) {
+                        const input = document.getElementById(`fee-input-${cat.id}`);
+                        if (!input) continue;
+                        let newPrice = parseFloat(input.value);
+                        if (isNaN(newPrice) || newPrice < 0) newPrice = 0;
+                        
+                        const existingConfig = (window.installFeesConfig || {})[cat.id];
+                        if (existingConfig) {
+                            if (existingConfig.price !== newPrice) {
+                                await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${existingConfig.id}`, {
+                                    method: 'PATCH',
+                                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ price: newPrice })
+                                });
+                            }
+                        } else if (newPrice > 0) {
+                            await fetch(`${SUPABASE_URL}/rest/v1/products`, {
+                                method: 'POST',
+                                headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ name: cat.id, category: '__install_fees__', price: newPrice, in_stock: true })
+                            });
+                        }
+                    }
+                    showToast('保存成功', 'success');
+                    try { localStorage.removeItem('ygf_products_cache'); } catch(e){}
+                    await fetchProducts();
+                    renderInstallPanel();
+                } catch(e) {
+                    showToast('保存失败，请检查网络', 'error');
+                }
+            }
+        }
+
+        async function handleShopImageUpload(event) { 
+            if (!isAdmin) return; 
+            const file = event.target.files[0]; 
+            if (!file) return; 
+            showToast('正在压缩并上传...', 'info'); 
+            try { 
+                const compressedFile = await compressImage(file, 1200, 1200, 0.8);
+                const fileExt = 'jpg'; 
+                const fileName = `shop-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`; 
+                
+                const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${fileName}`, { 
+                    method: 'POST', 
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': compressedFile.type }, 
+                    body: compressedFile 
+                }); 
+                if (!uploadRes.ok) throw new Error('上传失败'); 
+                
+                const imageUrl = `${SUPABASE_URL}/storage/v1/object/public/product-images/${fileName}`; 
+                const dbPayload = { name: 'shop_image', category: '__shop_gallery__', price: 0, in_stock: true, image_url: imageUrl }; 
+                
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/products`, { 
+                    method: 'POST', 
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(dbPayload) 
+                }); 
+                if (!response.ok) throw new Error('保存失败'); 
+                
+                showToast('上传成功！', 'success'); 
+                try { localStorage.removeItem('ygf_products_cache'); } catch(e) { console.warn(e); } 
+                await fetchProducts(); 
+            } catch (error) { 
+                showToast('上传失败', 'error'); 
+            } finally { 
+                event.target.value = ''; 
+            } 
+        }
+
+        async function handleQRUpload(event) { 
+            if (!isAdmin) return; 
+            const file = event.target.files[0]; 
+            if (!file) return; 
+            showToast('正在压缩并更新二维码...', 'info'); 
+            try { 
+                const compressedFile = await compressImage(file, 800, 800, 0.9);
+                const fileExt = 'jpg'; 
+                const fileName = `qrcode-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`; 
+                
+                const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${fileName}`, { 
+                    method: 'POST', 
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': compressedFile.type }, 
+                    body: compressedFile 
+                }); 
+                if (!uploadRes.ok) throw new Error('上传失败'); 
+                
+                const imageUrl = `${SUPABASE_URL}/storage/v1/object/public/product-images/${fileName}`; 
+                if (qrCodeUrl) { await deleteStorageFile(qrCodeUrl); } 
+                
+                const dbPayload = { name: 'wechat_qr', category: '__qr_code__', price: 0, in_stock: true, image_url: imageUrl }; 
+                let url = `${SUPABASE_URL}/rest/v1/products`; 
+                let method = 'POST'; 
+                if (qrCodeId) { 
+                    url = `${SUPABASE_URL}/rest/v1/products?id=eq.${qrCodeId}`; 
+                    method = 'PATCH'; 
+                } 
+                
+                const response = await fetch(url, { 
+                    method: method, 
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, 
+                    body: JSON.stringify(dbPayload) 
+                }); 
+                if (!response.ok) throw new Error('保存失败'); 
+                
+                showToast('二维码更新成功！', 'success'); 
+                try { localStorage.removeItem('ygf_products_cache'); } catch(e) { console.warn(e); } 
+                await fetchProducts(); 
+            } catch (error) { 
+                showToast('上传失败', 'error'); 
+            } finally { 
+                event.target.value = ''; 
+            } 
+        }
+
+        async function handlePayQRUpload(event) { 
+            if (!isAdmin) return; 
+            const file = event.target.files[0]; 
+            if (!file) return; 
+            showToast('正在压缩并更新收款码...', 'info'); 
+            try { 
+                const compressedFile = await compressImage(file, 800, 800, 0.9);
+                const fileExt = 'jpg'; 
+                const fileName = `payqrcode-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`; 
+                
+                const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${fileName}`, { 
+                    method: 'POST', 
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': compressedFile.type }, 
+                    body: compressedFile 
+                }); 
+                if (!uploadRes.ok) throw new Error('上传失败'); 
+                
+                const imageUrl = `${SUPABASE_URL}/storage/v1/object/public/product-images/${fileName}`; 
+                if (payQrCodeUrl) { await deleteStorageFile(payQrCodeUrl); } 
+                
+                const dbPayload = { name: 'pay_qr', category: '__pay_qr_code__', price: 0, in_stock: true, image_url: imageUrl }; 
+                let url = `${SUPABASE_URL}/rest/v1/products`; 
+                let method = 'POST'; 
+                if (payQrCodeId) { 
+                    url = `${SUPABASE_URL}/rest/v1/products?id=eq.${payQrCodeId}`; 
+                    method = 'PATCH'; 
+                } 
+                
+                const response = await fetch(url, { 
+                    method: method, 
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, 
+                    body: JSON.stringify(dbPayload) 
+                }); 
+                if (!response.ok) throw new Error('保存失败'); 
+                
+                showToast('收款码更新成功！', 'success'); 
+                try { localStorage.removeItem('ygf_products_cache'); } catch(e) { console.warn(e); } 
+                await fetchProducts(); 
+            } catch (error) { 
+                showToast('上传失败', 'error'); 
+            } finally { 
+                event.target.value = ''; 
+            } 
+        }
+
+        async function deleteShopImage(id) { 
+            if (!isAdmin) return; 
+            const confirmed = await showModal({ title: '删除照片', desc: '确定删除吗？', confirmText: '删除', cancelText: '取消' }); 
+            if (confirmed !== true) return; 
+            showToast('正在删除...', 'info'); 
+            try { 
+                const existingImg = shopImages.find(i => String(i.id) === String(id)); 
+                if (existingImg && existingImg.image_url) { 
+                    await deleteStorageFile(existingImg.image_url); 
+                } 
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}`, { 
+                    method: 'DELETE', 
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } 
+                }); 
+                if (!response.ok) throw new Error('删除失败'); 
+                
+                showToast('已删除', 'success'); 
+                try { localStorage.removeItem('ygf_products_cache'); } catch(e) { console.warn(e); } 
+                await fetchProducts(); 
+            } catch (error) { 
+                showToast('删除失败', 'error'); 
+            } 
+        }
+
+        function renderShopGallery() { 
+            const wrapper = document.getElementById('shop-gallery-wrapper'); 
+            if (!wrapper) return; 
+            
+            if (shopImages.length === 0 && !isAdmin) { 
+                wrapper.innerHTML = ''; 
+                return; 
+            } 
+            
+            let html = `<div class="shop-gallery-title">门店实景展示</div><div class="shop-gallery">`; 
+            shopImages.forEach(img => { 
+                html += `<div class="gallery-item-wrap"><img src="${escapeHTML(img.image_url)}" onclick="openImageViewer(this.src)">${isAdmin ? `<button class="del-gallery-btn" onclick="deleteShopImage('${escapeJS(String(img.id))}')"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>` : ''}</div>`; 
+            }); 
+            
+            if (isAdmin) {
+                html += `<div class="upload-gallery-btn" onclick="document.getElementById('shop-image-upload').click()"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>添加照片</div>`; 
+            }
+            html += `</div>`; 
+            wrapper.innerHTML = html; 
+        }
+        
+        let isMapLoaded = false;
+        let isMapLoading = false;
         function openMapModal() { 
             triggerHaptic(); 
             closeAllPanels(); 
@@ -3746,9 +4718,6 @@
             }, 2000); 
         }
 
-        let isMapLoaded = false;
-        let isMapLoading = false;
-
         function initMap() { 
             window.shopMap = L.map('shop-map', { attributionControl: false }).setView([39.5211925, 116.6959995], 15); 
             L.tileLayer('https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=1&style=7', { maxZoom: 19 }).addTo(window.shopMap); 
@@ -3773,12 +4742,12 @@
                     }, 100); 
                     document.getElementById('disclaimer-agree-btn').onclick = function() { 
                         triggerHaptic(); 
-                        try { localStorage.setItem('yigongfang_disclaimer_agreed', 'true'); } catch(e) {} 
+                        try { localStorage.setItem('yigongfang_disclaimer_agreed', 'true'); } catch(e) { console.warn(e); } 
                         modal.classList.remove('active'); 
                         toggleBodyScroll(); 
                     }; 
                 } 
-            } catch(e) {} 
+            } catch(e) { console.warn(e); } 
         }
 
         window.updateUserOrdersBadge = async function() {
@@ -3808,8 +4777,23 @@
                         badge.style.display = 'none';
                     }
                 }
-            } catch(e) {}
+            } catch(e) { console.warn('Badge fetch failed'); }
         };
+
+        const originalProcessOrder = window.processOrderSubmission;
+        if (originalProcessOrder) {
+            window.processOrderSubmission = async function(...args) {
+                await originalProcessOrder(...args);
+                setTimeout(updateUserOrdersBadge, 1000); 
+            };
+        }
+        const originalQueryOrders = window.queryUserOrders;
+        if (originalQueryOrders) {
+            window.queryUserOrders = async function(...args) {
+                await originalQueryOrders(...args);
+                updateUserOrdersBadge(); 
+            };
+        }
 
         document.addEventListener('DOMContentLoaded', async () => {
             try {
