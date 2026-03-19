@@ -3986,13 +3986,10 @@ async function handleQuoteBgUpload(event) {
                         : `<span style="font-size: 11px; margin-right: 2px;">¥</span>${price.toFixed(2)} <span style="font-size: 11px; font-weight: normal;">/件</span>`;
 
                     html += `
-                    <div class="cart-item">
-                        <div class="cart-item-img" style="background: transparent; border: none; align-items: center; justify-content: flex-start; width: 40px;">
-                            <svg width="24" height="24" viewBox="0 0 24 24" stroke="var(--accent-color)" stroke-width="1.5" fill="none">${categoryIcons[cat.id] || categoryIcons.default}</svg>
-                        </div>
+                    <div class="cart-item" style="grid-template-columns: 1fr auto; padding-left: 12px; padding-right: 12px;">
                         <div class="cart-item-info">
-                            <div class="cart-item-title">${escapeHTML(cat.name)}</div>
-                            <div class="cart-item-price" style="font-size: 14px; color: var(--text-secondary);">${priceDisplay}</div>
+                            <div class="cart-item-title" style="font-size: 15px;">${escapeHTML(cat.name)}</div>
+                            <div class="cart-item-price" style="font-size: 14px; color: var(--text-secondary); margin-top: 2px;">${priceDisplay}</div>
                         </div>
                         <div class="stepper">
                             <button class="step-btn" onclick="changeInstallQty('${cat.id}', -1)"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3" fill="none"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
@@ -4170,7 +4167,6 @@ async function handleQuoteBgUpload(event) {
                 <div style="display: flex; flex-direction: column; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--divider);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <div style="font-size: 15px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" stroke="var(--accent-color)" stroke-width="2" fill="none">${categoryIcons[cat.id] || categoryIcons.default}</svg>
                             ${escapeHTML(cat.name)}
                         </div>
                         <div style="display: flex; align-items: center; gap: 6px;">
