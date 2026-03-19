@@ -4115,6 +4115,29 @@ async function handleQuoteBgUpload(event) {
             }
         }
 
+        window.getTodayInstallQueueNumber = async function() {
+            try {
+                // 获取今天凌晨的时间起点
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const startOfDay = today.toISOString();
+                
+                // 去数据库查询今天的全部订单
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?select=id,content&created_at=gte.${startOfDay}`, {
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                });
+                const orders = await res.json();
+                if (!Array.isArray(orders)) return 1;
+                
+                // 筛选出属于“自带件装车”的订单并计算数量
+                const installOrders = orders.filter(o => o.content && o.content.includes('自带件装车预约'));
+                return installOrders.length + 1; // 现在的数量 + 1 就是当前排号
+            } catch(e) {
+                console.warn('获取排号失败，默认返回1', e);
+                return 1;
+            }
+        };
+
         window.renderInstallPanel = function() {
             const cats = getInstallCategories();
             const content = document.getElementById('install-content');
@@ -4124,6 +4147,16 @@ async function handleQuoteBgUpload(event) {
             let html = '';
             let hasNegotiable = false;
             
+            // 新增：醒目的排号横幅UI
+            html += `
+            <div id="queue-info-banner" style="background: linear-gradient(90deg, #8B1C31, #B7324B); color: white; padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(139, 28, 49, 0.2);">
+                <span style="display:flex; align-items:center; gap:6px;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    今日装车排号
+                </span>
+                <span id="queue-number-display" style="font-size: 13px; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 100px;">正在获取...</span>
+            </div>`;
+
             if (isAdmin) {
                 html += `<button class="checkout-btn" style="margin-bottom: 16px; background: var(--img-bg); color: var(--text-primary); box-shadow: none; border: 1px dashed var(--divider); display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="openAdminInstallFeeSetup()"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>老板：设置各部位装车工时费</button>`;
             }
@@ -4166,6 +4199,21 @@ async function handleQuoteBgUpload(event) {
             
             content.innerHTML = html;
             totalEl.innerText = totalFee.toFixed(2) + (hasNegotiable ? ' + 面议' : '');
+
+            // 触发排号自动获取
+            if (!window.isFetchingQueue) {
+                window.isFetchingQueue = true;
+                window.getTodayInstallQueueNumber().then(num => {
+                    window.currentInstallQueue = num; // 缓存一下
+                    const el = document.getElementById('queue-number-display');
+                    if (el) el.innerHTML = `您将排在第 <span style="font-size:16px; color:#FFD700; font-weight:800; margin:0 2px;">${num}</span> 位`;
+                }).finally(() => { window.isFetchingQueue = false; });
+            } else if (window.currentInstallQueue) {
+                setTimeout(() => {
+                    const el = document.getElementById('queue-number-display');
+                    if (el) el.innerHTML = `您将排在第 <span style="font-size:16px; color:#FFD700; font-weight:800; margin:0 2px;">${window.currentInstallQueue}</span> 位`;
+                }, 0);
+            }
         };
 
         window.changeInstallQty = function(id, delta) {
@@ -4191,15 +4239,19 @@ async function handleQuoteBgUpload(event) {
             isProcessingOrder = true;
             const btn = document.getElementById('install-checkout-btn');
             const origText = btn.innerText;
-            btn.innerText = '正在生成单据...';
+            btn.innerText = '正在锁定排号并生成单据...';
             btn.disabled = true;
 
             try {
+                // 提交前进行最终确认，防止两人同时提交冲突
+                const queueNum = await window.getTodayInstallQueueNumber();
+                window.currentInstallQueue = queueNum + 1; // 提前给下一个打开界面的顾客预留号码
+
                 const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, ''); 
                 const randomCode = Math.floor(1000 + Math.random() * 9000); 
                 const orderNo = `WX-${dateStr}-${randomCode}`;
                 
-                let orderText = `【壹工坊摩配 · 自带件装车预约】\n━━━━━━━━━━━━━━\n订单编号：${orderNo}\n联系方式：${contactInfo}\n━━━━━━━━━━━━━━\n装车明细：\n`; 
+                let orderText = `【壹工坊摩配 · 自带件装车预约】\n━━━━━━━━━━━━━━\n排队号码：第 ${queueNum} 位\n订单编号：${orderNo}\n联系方式：${contactInfo}\n━━━━━━━━━━━━━━\n装车明细：\n`; 
                 
                 let totalCents = 0;
                 let hasNegotiable = false;
@@ -4225,7 +4277,7 @@ async function handleQuoteBgUpload(event) {
                 const totalStr = (totalCents / 100).toFixed(2);
                 const finalTotalStr = hasNegotiable && totalCents === 0 ? '面议' : `¥${totalStr}${hasNegotiable ? ' + 面议' : ''}`;
                 
-                orderText += `━━━━━━━━━━━━━━\n工时费总计：${finalTotalStr}\n\n老板你好，我自带了以上配件需要装车，请预留工位！`;
+                orderText += `━━━━━━━━━━━━━━\n工时费总计：${finalTotalStr}\n\n老板你好，我是今天的第 ${queueNum} 位排号，自带了以上配件需要装车，请预留工位！`;
 
                 window.currentOrderText = orderText;
                 const receiptBase64 = await generateReceiptImage(orderText);
@@ -4260,14 +4312,14 @@ async function handleQuoteBgUpload(event) {
                 } catch(e) {}
 
                 try {
-                    const notifyText = `收到新的【自带件装车】预约！\n工时费总计: ${finalTotalStr}\n客户联系: ${contactInfo}`;
+                    const notifyText = `收到新的【自带件装车】预约！\n今日排号: 第 ${queueNum} 位\n工时费总计: ${finalTotalStr}\n客户联系: ${contactInfo}`;
                     fetch('https://wxpusher.zjiecode.com/api/send/message', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             appToken: 'AT_Mg7wgtia4se3Ft9bCK78kLVpTm9sSDGU',
                             content: notifyText,
-                            summary: '自带件装车预约',
+                            summary: `装车排号：第 ${queueNum} 位`,
                             contentType: 1, 
                             uids: ['UID_WSxlMsHcijIn2p4Sgbg80B0L0NwO']
                         })
@@ -4279,7 +4331,12 @@ async function handleQuoteBgUpload(event) {
                 const qrImgSrc = qrCodeUrl ? escapeHTML(qrCodeUrl) : 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=weixin://contacts/profile/wxid_w5lxkhqtn06w22';
                 
                 await showModal({
-                    title: '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; margin-top: 10px; padding-bottom: 10px;"><div style="width: 52px; height: 52px; background: #07C160; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(7,193,96,0.3);"><svg viewBox="0 0 24 24" width="32" height="32" stroke="#FFF" stroke-width="3" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.5px;">装车预约单已生成</div></div>',
+                    title: `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; margin-top: 10px; padding-bottom: 6px;">
+                                <div style="font-size: 16px; color: var(--text-secondary); margin-bottom: 4px;">装车预约单已生成</div>
+                                <div style="font-size: 28px; font-weight: 900; color: var(--accent-color); letter-spacing: 1px;">
+                                    <span style="font-size: 16px; color: var(--text-primary);">今日排号:</span> 第 ${queueNum} 位
+                                </div>
+                            </div>`,
                     desc: `
                     <div style="text-align: left; font-size: 14px; line-height: 1.6; padding: 0 4px;">
                         ${receiptBase64 ? `
