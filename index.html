@@ -799,16 +799,37 @@
             const activeModals = document.querySelectorAll('.modal-overlay.active, .cart-panel-overlay.active'); 
             if (activeModals.length > 0) { 
                 if (!document.body.classList.contains('no-scroll')) { 
+                    // 记录当前滚动位置并锁定
                     scrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0; 
                     document.body.style.top = `-${scrollPosition}px`; 
                     document.body.classList.add('no-scroll'); 
                 } 
             } else { 
                 if (document.body.classList.contains('no-scroll')) { 
+                    // 解除锁定
                     document.body.classList.remove('no-scroll'); 
                     document.body.style.top = ''; 
-                    void document.body.offsetHeight; 
-                    window.scrollTo(0, scrollPosition); 
+                    
+                    // 【核心修复】：解决 iOS 弹窗关闭后页面假死/划不动的问题
+                    if (isIOS) {
+                        // 第一步：强制重排 (类似你说的“关屏再开屏”)
+                        // 瞬间隐藏 body 再显示，并读取 offsetHeight 强制 WebKit 重新计算整个渲染树
+                        document.body.style.display = 'none';
+                        void document.body.offsetHeight; 
+                        document.body.style.display = '';
+                        
+                        // 第二步：打破 iOS 的滚动锁定状态
+                        // 恢复原位置后，利用 setTimeout 进行 1px 的微小滚动刺激，唤醒底层滚动
+                        window.scrollTo(0, scrollPosition);
+                        setTimeout(() => {
+                            window.scrollTo(0, scrollPosition === 0 ? 1 : scrollPosition - 1);
+                            window.scrollTo(0, scrollPosition);
+                        }, 10);
+                    } else {
+                        // 安卓及其他设备正常刷新并归位
+                        void document.body.offsetHeight; 
+                        window.scrollTo(0, scrollPosition); 
+                    }
                 } 
             }
         }
