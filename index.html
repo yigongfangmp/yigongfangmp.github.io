@@ -4097,13 +4097,42 @@ async function handleQuoteBgUpload(event) {
             return [...defaultCats, ...customPartsCats];
         }
 
-window.openInstallPanel = function() {
+// ================= 1. 新增：全局精确获取排队号的方法 =================
+        window.fetchInstallQueueCount = async function() {
+            try {
+                // 去云端查询所有未归档的订单，强制禁用缓存保证实时性
+                const qRes = await fetch(`${SUPABASE_URL}/rest/v1/orders?select=contact,content&is_archived=eq.false`, {
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                    cache: 'no-store'
+                });
+                if (qRes.ok) {
+                    const activeOrders = await qRes.json();
+                    const newOrdersCount = activeOrders.filter(o => {
+                        // 兼容老订单格式，解析出状态
+                        const parsed = decodeOrderContact(o.contact);
+                        // 只要状态是“待处理”(new) 且 订单内容包含“装车”，就算一个人头
+                        return parsed.status === 'new' && (o.content || '').includes('自带件装车');
+                    }).length;
+                    return newOrdersCount + 1; // 加上自己就是真实的排位
+                }
+            } catch (e) { console.warn('获取排队人数失败', e); }
+            return 1; // 默认保底为 1
+        };
+
+        // ================= 2. 修改：打开面板时，异步获取真实排号并渲染 =================
+        window.openInstallPanel = async function() {
             closeAllPanels();
             document.getElementById('install-panel').classList.add('active');
             document.getElementById('install-overlay').classList.add('active');
             toggleBodyScroll();
-            // 【修复 Bug 1：不再每次打开面板都清空购物车，改为清理排号缓存】
-            window.currentInstallQueue = null; 
+            installCart = {};
+            
+            // 先渲染一个“加载中”的排号，避免等待时页面卡顿
+            window.currentInstallQueue = '...';
+            renderInstallPanel();
+
+            // 异步去云端拿真实排号，拿到后再刷新一次界面
+            window.currentInstallQueue = await window.fetchInstallQueueCount();
             renderInstallPanel();
         }
 
@@ -4116,35 +4145,7 @@ window.openInstallPanel = function() {
             }
         }
 
-        window.getTodayInstallQueueNumber = async function() {
-            try {
-                // 获取今天凌晨的时间起点
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const startOfDay = today.toISOString();
-                
-                // 去数据库查询今天的订单：新增了 contact 字段用来判断状态，并过滤掉老板已归档的单子
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?select=id,content,contact&created_at=gte.${startOfDay}&is_archived=eq.false`, {
-                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-                });
-                const orders = await res.json();
-                if (!Array.isArray(orders)) return 1;
-                
-                // 核心修改：不仅要查“自带件装车”，还要查状态必须是 “[new]待处理” 的
-                const activeInstallOrders = orders.filter(o => {
-                    const isInstall = o.content && o.content.includes('自带件装车预约');
-                    const isNew = o.contact && o.contact.startsWith('[new]');
-                    return isInstall && isNew;
-                });
-                
-                // 还在等待处理的人数 + 1 = 你现在的实际排号
-                return activeInstallOrders.length + 1; 
-            } catch(e) {
-                console.warn('获取排号失败，默认返回1', e);
-                return 1;
-            }
-        };
-
+        // ================= 3. 修改：渲染面板，加入你的动态红色横幅 =================
         window.renderInstallPanel = function() {
             const cats = getInstallCategories();
             const content = document.getElementById('install-content');
@@ -4152,18 +4153,19 @@ window.openInstallPanel = function() {
             
             let totalFee = 0;
             let html = '';
-            let hasNegotiable = false;
-            
-            // 新增：醒目的排号横幅UI
-            html += `
-            <div id="queue-info-banner" style="background: linear-gradient(90deg, #8B1C31, #B7324B); color: white; padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(139, 28, 49, 0.2);">
-                <span style="display:flex; align-items:center; gap:6px;">
-                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                    今日装车排号
-                </span>
-                <span id="queue-number-display" style="font-size: 13px; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 100px;">正在获取...</span>
-            </div>`;
 
+            // 注入高级质感的红色排队横幅（排位数字绑定了刚才获取到的真实变量）
+            html += `
+            <div style="background: linear-gradient(135deg, #a42c3d, #b9374c); color: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(164, 44, 61, 0.2);">
+                <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px;">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    当前装车排号
+                </div>
+                <div style="background: rgba(255,255,255,0.25); padding: 4px 12px; border-radius: 99px; font-size: 13px;">
+                    您预计排在第 <span style="color: #FFD700; font-size: 18px; font-weight: 800; font-family: monospace; margin: 0 2px;">${window.currentInstallQueue || 1}</span> 位
+                </div>
+            </div>`;
+            
             if (isAdmin) {
                 html += `<button class="checkout-btn" style="margin-bottom: 16px; background: var(--img-bg); color: var(--text-primary); box-shadow: none; border: 1px dashed var(--divider); display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="openAdminInstallFeeSetup()"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>老板：设置各部位装车工时费</button>`;
             }
@@ -4174,22 +4176,19 @@ window.openInstallPanel = function() {
                 const feeConfig = (window.installFeesConfig || {})[cat.id];
                 const price = feeConfig ? feeConfig.price : 0;
                 
-                if (price > 0 || price === -1 || isAdmin) {
+                if (price > 0 || isAdmin) {
                     availableCount++;
                     const qty = installCart[cat.id] || 0;
+                    totalFee += price * qty;
                     
-                    if (price > 0) totalFee += price * qty;
-                    if (price === -1 && qty > 0) hasNegotiable = true;
-                    
-                    let priceDisplay = price === -1 
-                        ? `<span style="font-size: 14px; font-weight: 600; color: var(--accent-color);">面议</span>`
-                        : `<span style="font-size: 11px; margin-right: 2px;">¥</span>${price.toFixed(2)} <span style="font-size: 11px; font-weight: normal;">/件</span>`;
-
                     html += `
-                    <div class="cart-item" style="grid-template-columns: 1fr auto; padding-left: 12px; padding-right: 12px;">
+                    <div class="cart-item">
+                        <div class="cart-item-img" style="background: transparent; border: none; align-items: center; justify-content: flex-start; width: 40px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" stroke="var(--accent-color)" stroke-width="1.5" fill="none">${categoryIcons[cat.id] || categoryIcons.default}</svg>
+                        </div>
                         <div class="cart-item-info">
-                            <div class="cart-item-title" style="font-size: 15px;">${escapeHTML(cat.name)}</div>
-                            <div class="cart-item-price" style="font-size: 14px; color: var(--text-secondary); margin-top: 2px;">${priceDisplay}</div>
+                            <div class="cart-item-title">${escapeHTML(cat.name)}</div>
+                            <div class="cart-item-price" style="font-size: 14px; color: var(--text-secondary);"><span style="font-size: 11px; margin-right: 2px;">¥</span>${price.toFixed(2)} <span style="font-size: 11px; font-weight: normal;">/件</span></div>
                         </div>
                         <div class="stepper">
                             <button class="step-btn" onclick="changeInstallQty('${cat.id}', -1)"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3" fill="none"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
@@ -4205,31 +4204,17 @@ window.openInstallPanel = function() {
             }
             
             content.innerHTML = html;
-            totalEl.innerText = totalFee.toFixed(2) + (hasNegotiable ? ' + 面议' : '');
-
-            // 【修复 Bug 2：防止点加减号时疯狂请求 Supabase 数据库引发崩溃】
-            if (!window.isFetchingQueue && !window.currentInstallQueue) {
-                window.isFetchingQueue = true;
-                window.getTodayInstallQueueNumber().then(num => {
-                    window.currentInstallQueue = num; // 缓存
-                    const el = document.getElementById('queue-number-display');
-                    if (el) el.innerHTML = `您预计排在第 <span style="font-size:16px; color:#FFD700; font-weight:800; margin:0 2px;">${num}</span> 位`;
-                }).finally(() => { window.isFetchingQueue = false; });
-            } else if (window.currentInstallQueue) {
-                setTimeout(() => {
-                    const el = document.getElementById('queue-number-display');
-                    if (el) el.innerHTML = `您预计排在第 <span style="font-size:16px; color:#FFD700; font-weight:800; margin:0 2px;">${window.currentInstallQueue}</span> 位`;
-                }, 0);
-            }
-        };
+            totalEl.innerText = totalFee.toFixed(2);
+        }
 
         window.changeInstallQty = function(id, delta) {
             triggerHaptic();
             installCart[id] = (installCart[id] || 0) + delta;
             if (installCart[id] < 0) installCart[id] = 0;
             renderInstallPanel();
-        };
+        }
 
+        // ================= 4. 修改：提交单据时，使用全局的准确排位生成小票 =================
         window.checkoutInstallOnly = async function() {
             if (isProcessingOrder) return;
             const items = Object.keys(installCart).filter(id => installCart[id] > 0);
@@ -4246,41 +4231,18 @@ window.openInstallPanel = function() {
             isProcessingOrder = true;
             const btn = document.getElementById('install-checkout-btn');
             const origText = btn.innerText;
-            btn.innerText = '正在精准排号...'; 
+            btn.innerText = '正在排号并生成单据...';
             btn.disabled = true;
 
             try {
-                // ================= 终极修复：精确计算装车排队数量 =================
-                let queueCount = 1;
-                try {
-                    // 查询 contact 和 content 字段，强制禁用缓存
-                    const qRes = await fetch(`${SUPABASE_URL}/rest/v1/orders?select=contact,content&is_archived=eq.false`, {
-                        headers: { 
-                            'apikey': SUPABASE_ANON_KEY, 
-                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}` 
-                        },
-                        cache: 'no-store' // 强制拒绝浏览器缓存，拿最新数据
-                    });
-                    if (qRes.ok) {
-                        const activeOrders = await qRes.json();
-                        const newOrdersCount = activeOrders.filter(o => {
-                            // 1. 使用原生解码器，兼容 22 号那种没有 [new] 前缀的旧单子
-                            const parsed = decodeOrderContact(o.contact);
-                            // 2. 状态是“待处理”，且内容是“装车单”，避免买配件的单子跑来占装车工位的号
-                            const isNew = parsed.status === 'new';
-                            const isInstallOrder = (o.content || '').includes('自带件装车');
-                            return isNew && isInstallOrder;
-                        }).length;
-                        queueCount = newOrdersCount + 1; // 真实排队号 = 待处理数量 + 1（自己）
-                    }
-                } catch (e) { console.warn('获取排队人数失败', e); }
-                // =======================================================================
+                // 为了极端安全防并发，提交前再请求一次最新排号
+                let queueCount = await window.fetchInstallQueueCount();
 
                 const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, ''); 
                 const randomCode = Math.floor(1000 + Math.random() * 9000); 
                 const orderNo = `WX-${dateStr}-${randomCode}`;
                 
-                let orderText = `【壹工坊摩配 · 自带件装车预约】\n━━━━━━━━━━━━━━\n订单编号：${orderNo}\n前方排队：${queueCount > 1 ? (queueCount - 1) + '单待处理' : '无需排队，极速开工'}\n您的位置：当前第 ${queueCount} 位\n联系方式：${contactInfo}\n━━━━━━━━━━━━━━\n装车明细：\n`; 
+                let orderText = `【壹工坊摩配 · 自带件装车预约】\n━━━━━━━━━━━━━━\n排队号码：第 ${queueCount} 位\n前方等候：${queueCount > 1 ? (queueCount - 1) + ' 单' : '无人排队，极速开工'}\n订单编号：${orderNo}\n联系方式：${contactInfo}\n━━━━━━━━━━━━━━\n装车明细：\n`; 
                 
                 let totalCents = 0;
                 const cats = getInstallCategories();
@@ -4298,7 +4260,7 @@ window.openInstallPanel = function() {
                 });
                 
                 const totalStr = (totalCents / 100).toFixed(2);
-                orderText += `━━━━━━━━━━━━━━\n工时费总计：¥${totalStr}\n\n老板你好，我自带了以上配件需要装车，当前排在第${queueCount}位，请预留工位！`;
+                orderText += `━━━━━━━━━━━━━━\n工时费总计：¥${totalStr}\n\n老板你好，我是今天的第 ${queueCount} 位排号，自带了以上配件需要装车，请预留工位！`;
 
                 window.currentOrderText = orderText;
                 const receiptBase64 = await generateReceiptImage(orderText);
