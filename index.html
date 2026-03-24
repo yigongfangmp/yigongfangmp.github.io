@@ -4246,21 +4246,31 @@ window.openInstallPanel = function() {
             isProcessingOrder = true;
             const btn = document.getElementById('install-checkout-btn');
             const origText = btn.innerText;
-            btn.innerText = '正在排号并生成单据...'; // 提示语稍微改一下显得更高级
+            btn.innerText = '正在精准排号...'; 
             btn.disabled = true;
 
             try {
-                // ================= 新增：动态查询未处理订单数量，计算排队位置 =================
+                // ================= 终极修复：精确计算装车排队数量 =================
                 let queueCount = 1;
                 try {
-                    // 去云端查询所有未归档的订单
-                    const qRes = await fetch(`${SUPABASE_URL}/rest/v1/orders?select=contact&is_archived=eq.false`, {
-                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                    // 查询 contact 和 content 字段，强制禁用缓存
+                    const qRes = await fetch(`${SUPABASE_URL}/rest/v1/orders?select=contact,content&is_archived=eq.false`, {
+                        headers: { 
+                            'apikey': SUPABASE_ANON_KEY, 
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}` 
+                        },
+                        cache: 'no-store' // 强制拒绝浏览器缓存，拿最新数据
                     });
                     if (qRes.ok) {
                         const activeOrders = await qRes.json();
-                        // 筛选出联系方式前缀带有 [new] 的订单，说明老板还没处理
-                        const newOrdersCount = activeOrders.filter(o => o.contact && o.contact.startsWith('[new]')).length;
+                        const newOrdersCount = activeOrders.filter(o => {
+                            // 1. 使用原生解码器，兼容 22 号那种没有 [new] 前缀的旧单子
+                            const parsed = decodeOrderContact(o.contact);
+                            // 2. 状态是“待处理”，且内容是“装车单”，避免买配件的单子跑来占装车工位的号
+                            const isNew = parsed.status === 'new';
+                            const isInstallOrder = (o.content || '').includes('自带件装车');
+                            return isNew && isInstallOrder;
+                        }).length;
                         queueCount = newOrdersCount + 1; // 真实排队号 = 待处理数量 + 1（自己）
                     }
                 } catch (e) { console.warn('获取排队人数失败', e); }
@@ -4270,7 +4280,6 @@ window.openInstallPanel = function() {
                 const randomCode = Math.floor(1000 + Math.random() * 9000); 
                 const orderNo = `WX-${dateStr}-${randomCode}`;
                 
-                // ================= 修改：将排队信息优雅地写进小票头部 =================
                 let orderText = `【壹工坊摩配 · 自带件装车预约】\n━━━━━━━━━━━━━━\n订单编号：${orderNo}\n前方排队：${queueCount > 1 ? (queueCount - 1) + '单待处理' : '无需排队，极速开工'}\n您的位置：当前第 ${queueCount} 位\n联系方式：${contactInfo}\n━━━━━━━━━━━━━━\n装车明细：\n`; 
                 
                 let totalCents = 0;
@@ -4284,13 +4293,11 @@ window.openInstallPanel = function() {
                     const price = feeConfig ? feeConfig.price : 0;
                     
                     const itemTotal = Math.round(price * 100) * qty;
-                    // 保留了原来的序号 index + 1，但现在顾客不会把它和排队号搞混了
                     orderText += `${index + 1}. 自带[${name}]装车\n   ▸ 数量: ${qty}个  |  工时费: ¥${(itemTotal/100).toFixed(2)}\n`;
                     totalCents += itemTotal;
                 });
                 
                 const totalStr = (totalCents / 100).toFixed(2);
-                // 底部给老板的留言也加上自己的排位
                 orderText += `━━━━━━━━━━━━━━\n工时费总计：¥${totalStr}\n\n老板你好，我自带了以上配件需要装车，当前排在第${queueCount}位，请预留工位！`;
 
                 window.currentOrderText = orderText;
