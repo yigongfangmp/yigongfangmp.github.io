@@ -4119,7 +4119,26 @@ async function handleQuoteBgUpload(event) {
             return 1; // 默认保底为 1
         };
 
-        // ================= 2. 修改：打开面板时，异步获取真实排号并渲染 =================
+        // ================= 1. 新增：全局精确获取排队号的方法 =================
+        window.fetchInstallQueueCount = async function() {
+            try {
+                const qRes = await fetch(`${SUPABASE_URL}/rest/v1/orders?select=contact,content&is_archived=eq.false`, {
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                    cache: 'no-store'
+                });
+                if (qRes.ok) {
+                    const activeOrders = await qRes.json();
+                    const newOrdersCount = activeOrders.filter(o => {
+                        const parsed = decodeOrderContact(o.contact);
+                        return parsed.status === 'new' && (o.content || '').includes('自带件装车');
+                    }).length;
+                    return newOrdersCount + 1; 
+                }
+            } catch (e) { console.warn('获取排队人数失败', e); }
+            return 1; 
+        };
+
+        // ================= 2. 修改：打开面板时渲染排号 =================
         window.openInstallPanel = async function() {
             closeAllPanels();
             document.getElementById('install-panel').classList.add('active');
@@ -4127,11 +4146,9 @@ async function handleQuoteBgUpload(event) {
             toggleBodyScroll();
             installCart = {};
             
-            // 先渲染一个“加载中”的排号，避免等待时页面卡顿
             window.currentInstallQueue = '...';
             renderInstallPanel();
 
-            // 异步去云端拿真实排号，拿到后再刷新一次界面
             window.currentInstallQueue = await window.fetchInstallQueueCount();
             renderInstallPanel();
         }
@@ -4145,7 +4162,7 @@ async function handleQuoteBgUpload(event) {
             }
         }
 
-        // ================= 3. 修改：渲染面板，加入你的动态红色横幅 =================
+        // ================= 3. 核心修复：无视价格强制展示，0元显示“面议” =================
         window.renderInstallPanel = function() {
             const cats = getInstallCategories();
             const content = document.getElementById('install-content');
@@ -4154,7 +4171,6 @@ async function handleQuoteBgUpload(event) {
             let totalFee = 0;
             let html = '';
 
-            // 注入高级质感的红色排队横幅（排位数字绑定了刚才获取到的真实变量）
             html += `
             <div style="background: linear-gradient(135deg, #a42c3d, #b9374c); color: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(164, 44, 61, 0.2);">
                 <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px;">
@@ -4169,42 +4185,43 @@ async function handleQuoteBgUpload(event) {
             if (isAdmin) {
                 html += `<button class="checkout-btn" style="margin-bottom: 16px; background: var(--img-bg); color: var(--text-primary); box-shadow: none; border: 1px dashed var(--divider); display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="openAdminInstallFeeSetup()"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>老板：设置各部位装车工时费</button>`;
             }
-            
-            let availableCount = 0;
 
             cats.forEach(cat => {
                 const feeConfig = (window.installFeesConfig || {})[cat.id];
                 const price = feeConfig ? feeConfig.price : 0;
                 
-                if (price > 0 || isAdmin) {
-                    availableCount++;
-                    const qty = installCart[cat.id] || 0;
-                    totalFee += price * qty;
-                    
-                    html += `
-                    <div class="cart-item">
-                        <div class="cart-item-img" style="background: transparent; border: none; align-items: center; justify-content: flex-start; width: 40px;">
-                            <svg width="24" height="24" viewBox="0 0 24 24" stroke="var(--accent-color)" stroke-width="1.5" fill="none">${categoryIcons[cat.id] || categoryIcons.default}</svg>
-                        </div>
-                        <div class="cart-item-info">
-                            <div class="cart-item-title">${escapeHTML(cat.name)}</div>
-                            <div class="cart-item-price" style="font-size: 14px; color: var(--text-secondary);"><span style="font-size: 11px; margin-right: 2px;">¥</span>${price.toFixed(2)} <span style="font-size: 11px; font-weight: normal;">/件</span></div>
-                        </div>
-                        <div class="stepper">
-                            <button class="step-btn" onclick="changeInstallQty('${cat.id}', -1)"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3" fill="none"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-                            <div class="step-val">${qty}</div>
-                            <button class="step-btn" onclick="changeInstallQty('${cat.id}', 1)"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-                        </div>
-                    </div>`;
-                }
+                // 去掉了价格限制，直接展示所有可用部位
+                const qty = installCart[cat.id] || 0;
+                totalFee += price * qty;
+                
+                // 如果设置了金额显示金额，未设置（0元）则直接显示“面议”
+                const priceDisplay = price > 0 
+                    ? `<span style="font-size: 11px; margin-right: 2px;">¥</span>${price.toFixed(2)} <span style="font-size: 11px; font-weight: normal;">/件</span>`
+                    : `<span style="color: var(--accent-color); font-weight: 600;">面议</span>`;
+                
+                html += `
+                <div class="cart-item">
+                    <div class="cart-item-img" style="background: transparent; border: none; align-items: center; justify-content: flex-start; width: 40px;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" stroke="var(--accent-color)" stroke-width="1.5" fill="none">${categoryIcons[cat.id] || categoryIcons.default}</svg>
+                    </div>
+                    <div class="cart-item-info">
+                        <div class="cart-item-title">${escapeHTML(cat.name)}</div>
+                        <div class="cart-item-price" style="font-size: 14px; color: var(--text-secondary);">${priceDisplay}</div>
+                    </div>
+                    <div class="stepper">
+                        <button class="step-btn" onclick="changeInstallQty('${cat.id}', -1)"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3" fill="none"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                        <div class="step-val">${qty}</div>
+                        <button class="step-btn" onclick="changeInstallQty('${cat.id}', 1)"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                    </div>
+                </div>`;
             });
             
-            if (availableCount === 0) {
-                html += `<div class="empty-state">老板暂未配置独立装车服务，如有需要请直接添加老板微信联系哦。</div>`;
+            if (cats.length === 0) {
+                html += `<div class="empty-state">暂无可选的装车部位。</div>`;
             }
             
             content.innerHTML = html;
-            totalEl.innerText = totalFee.toFixed(2);
+            totalEl.innerText = totalFee > 0 ? totalFee.toFixed(2) : "面议";
         }
 
         window.changeInstallQty = function(id, delta) {
@@ -4214,7 +4231,7 @@ async function handleQuoteBgUpload(event) {
             renderInstallPanel();
         }
 
-        // ================= 4. 修改：提交单据时，使用全局的准确排位生成小票 =================
+        // ================= 4. 修改：提交单据时，明细也兼容“面议” =================
         window.checkoutInstallOnly = async function() {
             if (isProcessingOrder) return;
             const items = Object.keys(installCart).filter(id => installCart[id] > 0);
@@ -4235,7 +4252,6 @@ async function handleQuoteBgUpload(event) {
             btn.disabled = true;
 
             try {
-                // 为了极端安全防并发，提交前再请求一次最新排号
                 let queueCount = await window.fetchInstallQueueCount();
 
                 const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, ''); 
@@ -4255,12 +4271,14 @@ async function handleQuoteBgUpload(event) {
                     const price = feeConfig ? feeConfig.price : 0;
                     
                     const itemTotal = Math.round(price * 100) * qty;
-                    orderText += `${index + 1}. 自带[${name}]装车\n   ▸ 数量: ${qty}个  |  工时费: ¥${(itemTotal/100).toFixed(2)}\n`;
+                    // 若无定价，生成面议
+                    const priceStr = price > 0 ? `¥${(itemTotal/100).toFixed(2)}` : '面议';
+                    orderText += `${index + 1}. 自带[${name}]装车\n   ▸ 数量: ${qty}个  |  工时费: ${priceStr}\n`;
                     totalCents += itemTotal;
                 });
                 
-                const totalStr = (totalCents / 100).toFixed(2);
-                orderText += `━━━━━━━━━━━━━━\n工时费总计：¥${totalStr}\n\n老板你好，我是今天的第 ${queueCount} 位排号，自带了以上配件需要装车，请预留工位！`;
+                const totalStr = totalCents > 0 ? `¥${(totalCents / 100).toFixed(2)}` : '面议';
+                orderText += `━━━━━━━━━━━━━━\n工时费总计：${totalStr}\n\n老板你好，我是今天的第 ${queueCount} 位排号，自带了以上配件需要装车，请预留工位！`;
 
                 window.currentOrderText = orderText;
                 const receiptBase64 = await generateReceiptImage(orderText);
@@ -4295,7 +4313,7 @@ async function handleQuoteBgUpload(event) {
                 } catch(e) {}
 
                 try {
-                    const notifyText = `收到新的【自带件装车】预约！\n该客户排在第 ${queueCount} 位\n工时费总计: ¥${totalStr}\n客户联系: ${contactInfo}`;
+                    const notifyText = `收到新的【自带件装车】预约！\n该客户排在第 ${queueCount} 位\n工时费总计: ${totalStr}\n客户联系: ${contactInfo}`;
                     fetch('https://wxpusher.zjiecode.com/api/send/message', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
