@@ -4246,46 +4246,52 @@ window.openInstallPanel = function() {
             isProcessingOrder = true;
             const btn = document.getElementById('install-checkout-btn');
             const origText = btn.innerText;
-            btn.innerText = '正在锁定排号并生成单据...';
+            btn.innerText = '正在排号并生成单据...'; // 提示语稍微改一下显得更高级
             btn.disabled = true;
 
             try {
-                // 提交前进行最终确认，防止两人同时提交冲突
-                const queueNum = await window.getTodayInstallQueueNumber();
-                window.currentInstallQueue = queueNum + 1; // 提前给下一个打开界面的顾客预留号码
+                // ================= 新增：动态查询未处理订单数量，计算排队位置 =================
+                let queueCount = 1;
+                try {
+                    // 去云端查询所有未归档的订单
+                    const qRes = await fetch(`${SUPABASE_URL}/rest/v1/orders?select=contact&is_archived=eq.false`, {
+                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                    });
+                    if (qRes.ok) {
+                        const activeOrders = await qRes.json();
+                        // 筛选出联系方式前缀带有 [new] 的订单，说明老板还没处理
+                        const newOrdersCount = activeOrders.filter(o => o.contact && o.contact.startsWith('[new]')).length;
+                        queueCount = newOrdersCount + 1; // 真实排队号 = 待处理数量 + 1（自己）
+                    }
+                } catch (e) { console.warn('获取排队人数失败', e); }
+                // =======================================================================
 
                 const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, ''); 
                 const randomCode = Math.floor(1000 + Math.random() * 9000); 
                 const orderNo = `WX-${dateStr}-${randomCode}`;
                 
-                let orderText = `【壹工坊摩配 · 自带件装车预约】\n━━━━━━━━━━━━━━\n排队号码：第 ${queueNum} 位\n订单编号：${orderNo}\n联系方式：${contactInfo}\n━━━━━━━━━━━━━━\n装车明细：\n`; 
+                // ================= 修改：将排队信息优雅地写进小票头部 =================
+                let orderText = `【壹工坊摩配 · 自带件装车预约】\n━━━━━━━━━━━━━━\n订单编号：${orderNo}\n前方排队：${queueCount > 1 ? (queueCount - 1) + '单待处理' : '无需排队，极速开工'}\n您的位置：当前第 ${queueCount} 位\n联系方式：${contactInfo}\n━━━━━━━━━━━━━━\n装车明细：\n`; 
                 
                 let totalCents = 0;
-                let hasNegotiable = false;
                 const cats = getInstallCategories();
                 
                 items.forEach((id, index) => {
                     const cat = cats.find(c => c.id === id);
                     const name = cat ? cat.name : id;
                     const qty = installCart[id];
-                    // 【修复 Bug 4：防崩溃容错处理】
-                    const feeConfig = (window.installFeesConfig || {})[id];
+                    const feeConfig = window.installFeesConfig[id];
                     const price = feeConfig ? feeConfig.price : 0;
                     
-                    if (price === -1) {
-                        orderText += `${index + 1}. 自带[${name}]装车\n   ▸ 数量: ${qty}个  |  工时费: 面议\n`;
-                        hasNegotiable = true;
-                    } else {
-                        const itemTotal = Math.round(price * 100) * qty;
-                        orderText += `${index + 1}. 自带[${name}]装车\n   ▸ 数量: ${qty}个  |  工时费: ¥${(itemTotal/100).toFixed(2)}\n`;
-                        totalCents += itemTotal;
-                    }
+                    const itemTotal = Math.round(price * 100) * qty;
+                    // 保留了原来的序号 index + 1，但现在顾客不会把它和排队号搞混了
+                    orderText += `${index + 1}. 自带[${name}]装车\n   ▸ 数量: ${qty}个  |  工时费: ¥${(itemTotal/100).toFixed(2)}\n`;
+                    totalCents += itemTotal;
                 });
                 
                 const totalStr = (totalCents / 100).toFixed(2);
-                const finalTotalStr = hasNegotiable && totalCents === 0 ? '面议' : `¥${totalStr}${hasNegotiable ? ' + 面议' : ''}`;
-                
-                orderText += `━━━━━━━━━━━━━━\n工时费总计：${finalTotalStr}\n\n老板你好，我是今天的第 ${queueNum} 位排号，自带了以上配件需要装车，请预留工位！`;
+                // 底部给老板的留言也加上自己的排位
+                orderText += `━━━━━━━━━━━━━━\n工时费总计：¥${totalStr}\n\n老板你好，我自带了以上配件需要装车，当前排在第${queueCount}位，请预留工位！`;
 
                 window.currentOrderText = orderText;
                 const receiptBase64 = await generateReceiptImage(orderText);
@@ -4320,34 +4326,26 @@ window.openInstallPanel = function() {
                 } catch(e) {}
 
                 try {
-                    const notifyText = `收到新的【自带件装车】预约！\n预计排号: 第 ${queueNum} 位\n工时费总计: ${finalTotalStr}\n客户联系: ${contactInfo}`;
+                    const notifyText = `收到新的【自带件装车】预约！\n该客户排在第 ${queueCount} 位\n工时费总计: ¥${totalStr}\n客户联系: ${contactInfo}`;
                     fetch('https://wxpusher.zjiecode.com/api/send/message', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             appToken: 'AT_Mg7wgtia4se3Ft9bCK78kLVpTm9sSDGU',
                             content: notifyText,
-                            summary: `装车排号：第 ${queueNum} 位`,
+                            summary: '自带件装车预约',
                             contentType: 1, 
                             uids: ['UID_WSxlMsHcijIn2p4Sgbg80B0L0NwO']
                         })
                     }).catch(e => {});
                 } catch(e) {}
 
-                // 【修复 Bug 3：生成订单后清空所选数量】
-                installCart = {};
-                
                 closeInstallPanel();
 
                 const qrImgSrc = qrCodeUrl ? escapeHTML(qrCodeUrl) : 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=weixin://contacts/profile/wxid_w5lxkhqtn06w22';
                 
                 await showModal({
-                    title: `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; margin-top: 10px; padding-bottom: 6px;">
-                                <div style="font-size: 16px; color: var(--text-secondary); margin-bottom: 4px;">装车预约单已生成</div>
-                                <div style="font-size: 28px; font-weight: 900; color: var(--accent-color); letter-spacing: 1px;">
-                                    <span style="font-size: 16px; color: var(--text-primary);">预计排号:</span> 第 ${queueNum} 位
-                                </div>
-                            </div>`,
+                    title: '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; margin-top: 10px; padding-bottom: 10px;"><div style="width: 52px; height: 52px; background: #07C160; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"><svg viewBox="0 0 24 24" width="32" height="32" stroke="#FFF" stroke-width="3" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.5px;">装车预约单已生成</div></div>',
                     desc: `
                     <div style="text-align: left; font-size: 14px; line-height: 1.6; padding: 0 4px;">
                         ${receiptBase64 ? `
@@ -4362,7 +4360,7 @@ window.openInstallPanel = function() {
                             <img src="${qrImgSrc}" style="width: 130px; height: 130px; border-radius: 8px; border: 1px solid var(--divider); -webkit-touch-callout: default;">
                             <div style="font-size: 14px; font-weight: 800; color: var(--text-primary); margin-top: 8px;">长按加老板微信预留工位</div>
                         </div>
-                        <button onclick="manualCopyOrder(); setTimeout(() => { window.location.href = 'weixin://'; }, 800);" style="background: linear-gradient(90deg, #FF9000, #FF5000); color: #FFF; border: none; padding: 14px 16px; border-radius: 100px; font-size: 16px; font-weight: 800; width: 100%; cursor: pointer;">
+                        <button onclick="manualCopyOrder(); setTimeout(() => { window.location.href = 'weixin://'; }, 800);" style="background: linear-gradient(90deg, #FF9000, #FF5000); color: #FFF; border: none; padding: 14px 16px; border-radius: 100px; font-size: 16px; font-weight: 800; width: 100%; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 6px; letter-spacing: 0.5px;">
                             备用：一键复制文本明细前往微信
                         </button>
                     </div>`,
@@ -4380,7 +4378,6 @@ window.openInstallPanel = function() {
                 btn.disabled = false;
             }
         };
-
         window.openAdminInstallFeeSetup = async function() {
             if (!isAdmin) return;
             const cats = getInstallCategories();
