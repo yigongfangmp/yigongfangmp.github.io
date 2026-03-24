@@ -4162,7 +4162,7 @@ async function handleQuoteBgUpload(event) {
             }
         }
 
-        // ================= 3. 核心修复：无视价格强制展示，0元显示“面议” =================
+        // ================= 1. 徹底刪除顧客介面的 SVG 圖示並優化排版 =================
         window.renderInstallPanel = function() {
             const cats = getInstallCategories();
             const content = document.getElementById('install-content');
@@ -4190,28 +4190,24 @@ async function handleQuoteBgUpload(event) {
                 const feeConfig = (window.installFeesConfig || {})[cat.id];
                 const price = feeConfig ? feeConfig.price : 0;
                 
-                // 去掉了价格限制，直接展示所有可用部位
                 const qty = installCart[cat.id] || 0;
                 totalFee += price * qty;
                 
-                // 如果设置了金额显示金额，未设置（0元）则直接显示“面议”
                 const priceDisplay = price > 0 
                     ? `<span style="font-size: 11px; margin-right: 2px;">¥</span>${price.toFixed(2)} <span style="font-size: 11px; font-weight: normal;">/件</span>`
                     : `<span style="color: var(--accent-color); font-weight: 600;">面议</span>`;
                 
+                // 這裡徹底移除了 svg 圖示的 div，並改用左右兩端的 flex 佈局
                 html += `
-                <div class="cart-item">
-                    <div class="cart-item-img" style="background: transparent; border: none; align-items: center; justify-content: flex-start; width: 40px;">
-                        <svg width="24" height="24" viewBox="0 0 24 24" stroke="var(--accent-color)" stroke-width="1.5" fill="none">${categoryIcons[cat.id] || categoryIcons.default}</svg>
+                <div class="cart-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--card-color); border-radius: 8px; margin-bottom: 8px; border: 0.5px solid var(--divider);">
+                    <div class="cart-item-info" style="flex: 1;">
+                        <div class="cart-item-title" style="font-size: 15px; font-weight: 600; color: var(--text-primary);">${escapeHTML(cat.name)}</div>
+                        <div class="cart-item-price" style="font-size: 14px; color: var(--text-secondary); margin-top: 4px;">${priceDisplay}</div>
                     </div>
-                    <div class="cart-item-info">
-                        <div class="cart-item-title">${escapeHTML(cat.name)}</div>
-                        <div class="cart-item-price" style="font-size: 14px; color: var(--text-secondary);">${priceDisplay}</div>
-                    </div>
-                    <div class="stepper">
-                        <button class="step-btn" onclick="changeInstallQty('${cat.id}', -1)"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3" fill="none"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-                        <div class="step-val">${qty}</div>
-                        <button class="step-btn" onclick="changeInstallQty('${cat.id}', 1)"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                    <div class="stepper" style="display: flex; align-items: center; gap: 12px; border: none; background: transparent;">
+                        <button class="step-btn" style="font-size: 20px; font-weight: normal; line-height: 1; border: none; background: var(--img-bg); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: var(--text-primary);" onclick="changeInstallQty('${cat.id}', -1)">-</button>
+                        <div class="step-val" style="font-size: 15px; font-weight: 600; width: 20px;">${qty}</div>
+                        <button class="step-btn" style="font-size: 18px; font-weight: normal; line-height: 1; border: none; background: var(--accent-bg); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: var(--accent-color);" onclick="changeInstallQty('${cat.id}', 1)">+</button>
                     </div>
                 </div>`;
             });
@@ -4224,147 +4220,73 @@ async function handleQuoteBgUpload(event) {
             totalEl.innerText = totalFee > 0 ? totalFee.toFixed(2) : "面议";
         }
 
-        window.changeInstallQty = function(id, delta) {
-            triggerHaptic();
-            installCart[id] = (installCart[id] || 0) + delta;
-            if (installCart[id] < 0) installCart[id] = 0;
-            renderInstallPanel();
-        }
-
-        // ================= 4. 修改：提交单据时，明细也兼容“面议” =================
-        window.checkoutInstallOnly = async function() {
-            if (isProcessingOrder) return;
-            const items = Object.keys(installCart).filter(id => installCart[id] > 0);
-            if (items.length === 0) return showToast('请先添加需要装车的部位！', 'warning');
-
-            let contactInfo = document.getElementById('install-buyer-contact').value.trim();
-            if (!contactInfo) {
-                setTimeout(() => document.getElementById('install-buyer-contact').focus(), 100); 
-                return showToast('请填写联系方式', 'warning');
-            } else if (contactInfo.length < 5) {
-                return showToast('联系方式太短，请输入真实的微信号或手机号', 'warning');
-            }
-
-            isProcessingOrder = true;
-            const btn = document.getElementById('install-checkout-btn');
-            const origText = btn.innerText;
-            btn.innerText = '正在排号并生成单据...';
-            btn.disabled = true;
-
-            try {
-                let queueCount = await window.fetchInstallQueueCount();
-
-                const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, ''); 
-                const randomCode = Math.floor(1000 + Math.random() * 9000); 
-                const orderNo = `WX-${dateStr}-${randomCode}`;
+        // ================= 2. 徹底刪除老闆設定介面的 SVG 圖示 =================
+        window.openAdminInstallFeeSetup = async function() {
+            if (!isAdmin) return;
+            const cats = getInstallCategories();
+            
+            let inputsHtml = cats.map(cat => {
+                const feeConfig = (window.installFeesConfig || {})[cat.id];
+                const price = feeConfig ? feeConfig.price : 0;
                 
-                let orderText = `【壹工坊摩配 · 自带件装车预约】\n━━━━━━━━━━━━━━\n排队号码：第 ${queueCount} 位\n前方等候：${queueCount > 1 ? (queueCount - 1) + ' 单' : '无人排队，极速开工'}\n订单编号：${orderNo}\n联系方式：${contactInfo}\n━━━━━━━━━━━━━━\n装车明细：\n`; 
-                
-                let totalCents = 0;
-                const cats = getInstallCategories();
-                
-                items.forEach((id, index) => {
-                    const cat = cats.find(c => c.id === id);
-                    const name = cat ? cat.name : id;
-                    const qty = installCart[id];
-                    const feeConfig = window.installFeesConfig[id];
-                    const price = feeConfig ? feeConfig.price : 0;
-                    
-                    const itemTotal = Math.round(price * 100) * qty;
-                    // 若无定价，生成面议
-                    const priceStr = price > 0 ? `¥${(itemTotal/100).toFixed(2)}` : '面议';
-                    orderText += `${index + 1}. 自带[${name}]装车\n   ▸ 数量: ${qty}个  |  工时费: ${priceStr}\n`;
-                    totalCents += itemTotal;
-                });
-                
-                const totalStr = totalCents > 0 ? `¥${(totalCents / 100).toFixed(2)}` : '面议';
-                orderText += `━━━━━━━━━━━━━━\n工时费总计：${totalStr}\n\n老板你好，我是今天的第 ${queueCount} 位排号，自带了以上配件需要装车，请预留工位！`;
+                // 這裡也徹底移除了 SVG
+                return `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--divider);">
+                    <div style="font-size: 14px; font-weight: 500; color: var(--text-primary); display: flex; align-items: center;">
+                        ${escapeHTML(cat.name)}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 14px; color: var(--text-secondary);">¥</span>
+                        <input type="number" id="fee-input-${cat.id}" class="form-control" style="width: 80px; padding: 8px; text-align: center; background: var(--img-bg);" value="${price}" min="0">
+                    </div>
+                </div>`;
+            }).join('');
 
-                window.currentOrderText = orderText;
-                const receiptBase64 = await generateReceiptImage(orderText);
+            const action = await showModal({
+                title: '设置各部位装车工时费',
+                desc: `<div style="max-height: 50vh; overflow-y: auto; text-align: left; padding-right: 4px; margin-top: 10px; overscroll-behavior: contain;">
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5;">设置后，顾客可以在“自带件装车”界面自主选择需要的服务。<br><b style="color:var(--accent-color);">注：填 0 或不填表示不在客户端显示该项。</b></div>
+                    ${inputsHtml}
+                </div>`,
+                confirmText: '保存全部',
+                cancelText: '取消'
+            });
 
-                try { localStorage.setItem('yigongfang_last_contact', contactInfo); } catch(e){}
-
-                try { 
-                    if (navigator.clipboard && window.isSecureContext) { 
-                        navigator.clipboard.writeText(orderText).catch(e => console.warn(e)); 
-                    } else { 
-                        const t = document.createElement("textarea"); 
-                        t.value = orderText; 
-                        t.style.position = "fixed"; 
-                        t.style.left = "-9999px"; 
-                        t.style.top = "-9999px"; 
-                        t.setAttribute("readonly", "readonly"); 
-                        document.body.appendChild(t); 
-                        t.select(); 
-                        document.execCommand('copy'); 
-                        document.body.removeChild(t); 
-                    } 
-                } catch (err) {}
-
-                try { 
-                    const encodedContact = encodeOrderContact(contactInfo, 'new');
-                    const dbPayload = { contact: encodedContact, content: orderText }; 
-                    await fetch(`${SUPABASE_URL}/rest/v1/orders`, { 
-                        method: 'POST', 
-                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }, 
-                        body: JSON.stringify(dbPayload) 
-                    }); 
-                } catch(e) {}
-
+            if (action === true) {
+                showToast('正在批量保存...', 'info');
                 try {
-                    const notifyText = `收到新的【自带件装车】预约！\n该客户排在第 ${queueCount} 位\n工时费总计: ${totalStr}\n客户联系: ${contactInfo}`;
-                    fetch('https://wxpusher.zjiecode.com/api/send/message', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            appToken: 'AT_Mg7wgtia4se3Ft9bCK78kLVpTm9sSDGU',
-                            content: notifyText,
-                            summary: '自带件装车预约',
-                            contentType: 1, 
-                            uids: ['UID_WSxlMsHcijIn2p4Sgbg80B0L0NwO']
-                        })
-                    }).catch(e => {});
-                } catch(e) {}
-
-                closeInstallPanel();
-
-                const qrImgSrc = qrCodeUrl ? escapeHTML(qrCodeUrl) : 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=weixin://contacts/profile/wxid_w5lxkhqtn06w22';
-                
-                await showModal({
-                    title: '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; margin-top: 10px; padding-bottom: 10px;"><div style="width: 52px; height: 52px; background: #07C160; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"><svg viewBox="0 0 24 24" width="32" height="32" stroke="#FFF" stroke-width="3" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div style="font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.5px;">装车预约单已生成</div></div>',
-                    desc: `
-                    <div style="text-align: left; font-size: 14px; line-height: 1.6; padding: 0 4px;">
-                        ${receiptBase64 ? `
-                        <div style="text-align: center; margin-bottom: 24px;">
-                            <div style="font-size: 14px; color: var(--accent-color); font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                请长按下方小票保存，发给老板
-                            </div>
-                            <img src="${receiptBase64}" style="width: 85%; max-width: 280px; border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); border: 0.5px solid var(--divider);">
-                        </div>` : ''}
-                        <div style="text-align: center; margin-bottom: 24px;">
-                            <img src="${qrImgSrc}" style="width: 130px; height: 130px; border-radius: 8px; border: 1px solid var(--divider); -webkit-touch-callout: default;">
-                            <div style="font-size: 14px; font-weight: 800; color: var(--text-primary); margin-top: 8px;">长按加老板微信预留工位</div>
-                        </div>
-                        <button onclick="manualCopyOrder(); setTimeout(() => { window.location.href = 'weixin://'; }, 800);" style="background: linear-gradient(90deg, #FF9000, #FF5000); color: #FFF; border: none; padding: 14px 16px; border-radius: 100px; font-size: 16px; font-weight: 800; width: 100%; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 6px; letter-spacing: 0.5px;">
-                            备用：一键复制文本明细前往微信
-                        </button>
-                    </div>`,
-                    confirmText: '完成预约',
-                    cancelText: '导航去门店'
-                }).then(action => {
-                    if (action === false) openAmapNavi();
-                });
-
-            } catch(e) {
-                showToast('生成失败，请重试', 'error');
-            } finally {
-                isProcessingOrder = false;
-                btn.innerText = origText;
-                btn.disabled = false;
+                    for (const cat of cats) {
+                        const input = document.getElementById(`fee-input-${cat.id}`);
+                        if (!input) continue;
+                        let newPrice = parseFloat(input.value);
+                        if (isNaN(newPrice) || newPrice < 0) newPrice = 0;
+                        
+                        const existingConfig = (window.installFeesConfig || {})[cat.id];
+                        if (existingConfig) {
+                            if (existingConfig.price !== newPrice) {
+                                await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${existingConfig.id}`, {
+                                    method: 'PATCH',
+                                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ price: newPrice })
+                                });
+                            }
+                        } else if (newPrice > 0) {
+                            await fetch(`${SUPABASE_URL}/rest/v1/products`, {
+                                method: 'POST',
+                                headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ name: cat.id, category: '__install_fees__', price: newPrice, in_stock: true })
+                            });
+                        }
+                    }
+                    showToast('保存成功', 'success');
+                    try { localStorage.removeItem('ygf_products_cache'); } catch(e){}
+                    await fetchProducts();
+                    renderInstallPanel();
+                } catch(e) {
+                    showToast('保存失败，请检查网络', 'error');
+                }
             }
-        };
+        }
         window.openAdminInstallFeeSetup = async function() {
             if (!isAdmin) return;
             const cats = getInstallCategories();
